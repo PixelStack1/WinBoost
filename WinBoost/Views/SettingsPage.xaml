@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page x:Class="WinBoost.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:WinBoost.ViewModels"
+    Background="Transparent">
+    <Page.Resources>
+        <CollectionViewSource x:Name="Cvs" IsSourceGrouped="True" ItemsPath="Items" />
+    </Page.Resources>
+    <Grid Padding="28,20,28,0" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Spacing="4">
+            <TextBlock x:Name="HeaderText" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock x:Name="SubText" Opacity="0.7" TextWrapping="Wrap" />
+        </StackPanel>
+        <AutoSuggestBox x:Name="SearchBox" Grid.Row="1" QueryIcon="Find" MaxWidth="420" HorizontalAlignment="Left" Width="420"
+                        TextChanged="OnSearchChanged" />
+        <!-- Virtualized grouped list: only visible cards are realized -->
+        <ListView x:Name="List" Grid.Row="2" SelectionMode="None" IsItemClickEnabled="False"
+                  Padding="0,0,0,24">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.GroupStyle>
+                <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate x:DataType="vm:CategoryGroup">
+                            <TextBlock Text="{x:Bind Title}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+            </ListView.GroupStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:SettingViewModel">
+                                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,6" Padding="16,12">
+                                            <Grid ColumnSpacing="16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Spacing="4">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border Style="{StaticResource BadgeStyle}" Background="{x:Bind RiskBrush}">
+                                                            <TextBlock Text="{x:Bind RiskText, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Foreground="Black" />
+                                                        </Border>
+                                                        <Border Style="{StaticResource BadgeStyle}" Background="#335E9BFF" Visibility="{x:Bind RebootVisibility}">
+                                                            <TextBlock Text="{x:Bind RebootText, Mode=OneWay}" FontSize="11" />
+                                                        </Border>
+                                                        <Border Style="{StaticResource BadgeStyle}" Background="{StaticResource BoostAccentBrush}" Visibility="{x:Bind PendingVisibility, Mode=OneWay}">
+                                                            <TextBlock Text="{x:Bind PendingText, Mode=OneWay}" FontSize="11" />
+                                                        </Border>
+                                                        <TextBlock Text="{x:Bind Name, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{x:Bind Description, Mode=OneWay}" Opacity="0.7" TextWrapping="Wrap" FontSize="13" />
+                                                </StackPanel>
+                                                <ToggleSwitch Grid.Column="1" IsOn="{x:Bind IsOn, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

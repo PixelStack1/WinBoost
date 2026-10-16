@@ -1,0 +1,1523 @@
+[
+  {
+    "id": "power_ultimate",
+    "nameEn": "Ultimate Performance power plan",
+    "nameFr": "Mode de gestion Performances optimales",
+    "descriptionEn": "Creates (if needed) and activates the Ultimate Performance plan, which removes micro-latency from power saving. Revert restores your previous plan.",
+    "descriptionFr": "Crée (si besoin) et active le mode Performances optimales, qui supprime les micro-latences liées aux économies d'énergie. Annuler restaure ton mode précédent.",
+    "category": "Power",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerPlan"
+      }
+    ]
+  },
+  {
+    "id": "power_sleep_never",
+    "nameEn": "Never sleep when plugged in",
+    "nameFr": "Jamais de mise en veille sur secteur",
+    "descriptionEn": "Prevents the PC from going to sleep in the middle of a long game or download (on AC power).",
+    "descriptionFr": "Empêche le PC de se mettre en veille au milieu d'une longue partie ou d'un téléchargement (sur secteur).",
+    "category": "Power",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "238c9fa8-0aad-41ed-83f4-97be242c8f20",
+        "settingGuid": "29f6c1db-86da-48c5-9fdb-f2b67b1f44da",
+        "enabledValue": "0"
+      }
+    ]
+  },
+  {
+    "id": "power_hibernate_off",
+    "nameEn": "Disable hibernation",
+    "nameFr": "Désactiver la mise en veille prolongée",
+    "descriptionEn": "Turns hibernation off and deletes hiberfil.sys (frees several GB). Also disables Fast Startup.",
+    "descriptionFr": "Désactive la veille prolongée et supprime hiberfil.sys (libère plusieurs Go). Désactive aussi le démarrage rapide.",
+    "category": "Power",
+    "risk": "caution",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Command",
+        "applyCommand": "powercfg.exe /hibernate off",
+        "revertCommand": "powercfg.exe /hibernate on",
+        "checkCommand": "(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Name HibernateEnabled -EA SilentlyContinue).HibernateEnabled -eq 0"
+      }
+    ]
+  },
+  {
+    "id": "power_usb_suspend",
+    "nameEn": "Disable USB selective suspend",
+    "nameFr": "Désactiver la suspension sélective USB",
+    "descriptionEn": "Stops Windows from putting USB devices to sleep — avoids mouse/headset dropouts and input lag spikes.",
+    "descriptionFr": "Empêche Windows d'endormir les périphériques USB — évite les coupures de souris/casque et les pics de latence.",
+    "category": "Power",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3",
+        "settingGuid": "48e6b7a6-50f5-4782-a5d4-53bb8f07e226",
+        "enabledValue": "0"
+      }
+    ]
+  },
+  {
+    "id": "power_pcie_aspm",
+    "nameEn": "Disable PCI Express link power saving",
+    "nameFr": "Désactiver l'économie d'énergie PCI Express",
+    "descriptionEn": "Keeps the GPU/NVMe PCIe link at full power to avoid wake-up latency.",
+    "descriptionFr": "Garde le lien PCIe du GPU/NVMe à pleine puissance pour éviter les latences de réveil.",
+    "category": "Power",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "501a4d13-42af-4429-9fd1-a8218c268e20",
+        "settingGuid": "ee12f906-d277-404b-b6da-e5fa1a576df5",
+        "enabledValue": "0"
+      }
+    ]
+  },
+  {
+    "id": "power_disk_never",
+    "nameEn": "Never turn off hard disks",
+    "nameFr": "Ne jamais arrêter les disques",
+    "descriptionEn": "Prevents disks from spinning down, avoiding stutters when a game streams assets from an HDD.",
+    "descriptionFr": "Empêche l'arrêt des disques, évite les saccades quand un jeu charge depuis un disque dur.",
+    "category": "Power",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442",
+        "settingGuid": "6738e2c4-e8a5-4a42-b16a-e040e769756e",
+        "enabledValue": "0"
+      }
+    ]
+  },
+  {
+    "id": "power_wifi_max",
+    "nameEn": "Wi-Fi adapter at maximum performance",
+    "nameFr": "Carte Wi-Fi en performances maximales",
+    "descriptionEn": "Disables Wi-Fi power saving mode on AC power for steadier ping.",
+    "descriptionFr": "Désactive l'économie d'énergie Wi-Fi sur secteur pour un ping plus stable.",
+    "category": "Power",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "19cbb8fa-5279-450e-9fac-8a3d5fedd0c1",
+        "settingGuid": "12bbebe6-58d6-4636-95bb-3217ef867c1a",
+        "enabledValue": "0"
+      }
+    ]
+  },
+  {
+    "id": "power_throttling_off",
+    "nameEn": "Disable power throttling",
+    "nameFr": "Désactiver la limitation de puissance (Power Throttling)",
+    "descriptionEn": "Stops Windows from throttling background processes (game launchers, overlays, voice chat) to save power.",
+    "descriptionFr": "Empêche Windows de brider les processus en arrière-plan (launchers, overlays, chat vocal) pour économiser l'énergie.",
+    "category": "Power",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling",
+        "name": "PowerThrottlingOff",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "power_min_cpu_100",
+    "nameEn": "Minimum processor state 100%",
+    "nameFr": "État minimal du processeur à 100 %",
+    "descriptionEn": "Keeps the CPU at full clock on AC. Smoother frametimes but more heat and power draw. Not recommended on laptops.",
+    "descriptionFr": "Garde le CPU à pleine fréquence sur secteur. Frametimes plus réguliers mais plus de chaleur et de consommation. Déconseillé sur portable.",
+    "category": "Power",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+        "settingGuid": "893dee8e-2bef-41e0-89c6-b55d0929964c",
+        "enabledValue": "100"
+      }
+    ]
+  },
+  {
+    "id": "power_core_parking",
+    "nameEn": "Disable CPU core parking",
+    "nameFr": "Désactiver le parking des cœurs CPU",
+    "descriptionEn": "Keeps all cores unparked (minimum unparked cores = 100%) to avoid wake-up latency. Slightly higher idle power. On some Ryzen X3D CPUs, leave this off and let the chipset driver manage parking.",
+    "descriptionFr": "Garde tous les cœurs actifs (cœurs non parqués minimum = 100 %) pour éviter les latences de réveil. Consommation au repos un peu plus élevée. Sur certains Ryzen X3D, laisse ce réglage désactivé et laisse le pilote chipset gérer.",
+    "category": "Power",
+    "risk": "caution",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+        "settingGuid": "0cc5b647-c1df-4637-891a-dec35c318583",
+        "enabledValue": "100"
+      }
+    ]
+  },
+  {
+    "id": "power_boost_aggressive",
+    "nameEn": "Aggressive processor boost mode",
+    "nameFr": "Mode turbo processeur agressif",
+    "descriptionEn": "Sets processor performance boost mode to Aggressive. Hidden setting — skipped safely if your CPU/driver doesn't expose it.",
+    "descriptionFr": "Règle le mode turbo du processeur sur Agressif. Réglage caché — ignoré sans risque si ton CPU/pilote ne l'expose pas.",
+    "category": "Power",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "PowerSetting",
+        "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+        "settingGuid": "be337238-0d82-4146-a960-4f3749d470c7",
+        "enabledValue": "2"
+      }
+    ]
+  },
+  {
+    "id": "gm_game_mode",
+    "nameEn": "Enable Game Mode",
+    "nameFr": "Activer le mode Jeu",
+    "descriptionEn": "Lets Windows prioritise the game and block Windows Update driver installs/restart notifications while playing.",
+    "descriptionFr": "Permet à Windows de prioriser le jeu et de bloquer l'installation de pilotes et les notifications de redémarrage pendant que tu joues.",
+    "category": "Game Mode",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\GameBar",
+        "name": "AutoGameModeEnabled",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": "0"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\GameBar",
+        "name": "AllowAutoGameMode",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "gm_gamedvr_off",
+    "nameEn": "Disable Game DVR background recording",
+    "nameFr": "Désactiver l'enregistrement en arrière-plan (Game DVR)",
+    "descriptionEn": "Stops Xbox Game DVR from silently recording gameplay in the background — a known FPS and frametime killer.",
+    "descriptionFr": "Empêche Xbox Game DVR d'enregistrer en silence tes parties en arrière-plan — une cause connue de baisse de FPS.",
+    "category": "Game Mode",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "System\\GameConfigStore",
+        "name": "GameDVR_Enabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR",
+        "name": "AllowGameDVR",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+        "name": "HistoricalCaptureEnabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "gm_gamebar_off",
+    "nameEn": "Disable Xbox Game Bar captures",
+    "nameFr": "Désactiver les captures de la Xbox Game Bar",
+    "descriptionEn": "Disables Game Bar app capture and the Win+G overlay controller button. Keep it on if you use Game Bar widgets.",
+    "descriptionFr": "Désactive la capture d'applis de la Game Bar et l'ouverture via la touche Xbox de la manette. Garde-la si tu utilises ses widgets.",
+    "category": "Game Mode",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+        "name": "AppCaptureEnabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\GameBar",
+        "name": "UseNexusForGameBarEnabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "gm_gamebar_tips",
+    "nameEn": "Hide Game Bar startup tips",
+    "nameFr": "Masquer les astuces de la Game Bar au lancement",
+    "descriptionEn": "No more 'Press Win+G' popup when a game starts.",
+    "descriptionFr": "Plus de popup « Appuie sur Win+G » au lancement d'un jeu.",
+    "category": "Game Mode",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\GameBar",
+        "name": "ShowStartupPanel",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "gm_fso_off",
+    "nameEn": "Disable fullscreen optimizations (global)",
+    "nameFr": "Désactiver les optimisations plein écran (global)",
+    "descriptionEn": "Forces legacy exclusive fullscreen for older DirectX 9/11 games. Can reduce input lag in some titles, but breaks Alt-Tab smoothness and overlays in others.",
+    "descriptionFr": "Force le vrai plein écran exclusif pour les vieux jeux DirectX 9/11. Peut réduire l'input lag dans certains jeux, mais rend l'Alt-Tab moins fluide et casse certains overlays.",
+    "category": "Game Mode",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "System\\GameConfigStore",
+        "name": "GameDVR_FSEBehaviorMode",
+        "kind": "DWord",
+        "enabledValue": "2",
+        "disabledValue": "0"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "System\\GameConfigStore",
+        "name": "GameDVR_HonorUserFSEBehaviorMode",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": "0"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "System\\GameConfigStore",
+        "name": "GameDVR_FSEBehavior",
+        "kind": "DWord",
+        "enabledValue": "2",
+        "disabledValue": null
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "System\\GameConfigStore",
+        "name": "GameDVR_DXGIHonorFSEWindowsCompatible",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": "0"
+      }
+    ]
+  },
+  {
+    "id": "gm_notifications_off",
+    "nameEn": "Disable toast notifications",
+    "nameFr": "Désactiver les notifications",
+    "descriptionEn": "Turns off all pop-up notifications so nothing steals focus mid-game. You will miss app notifications until reverted.",
+    "descriptionFr": "Coupe toutes les notifications pour que rien ne vole le focus en pleine partie. Tu ne verras plus les notifications d'applis jusqu'à l'annulation.",
+    "category": "Game Mode",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications",
+        "name": "ToastEnabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      }
+    ]
+  },
+  {
+    "id": "gpu_hags",
+    "nameEn": "Hardware-accelerated GPU scheduling (HAGS)",
+    "nameFr": "Planification GPU à accélération matérielle (HAGS)",
+    "descriptionEn": "Lets the GPU manage its own memory scheduling — lower latency and required for DLSS Frame Generation. Needs a supported GPU/driver (GTX 1000+/RX 5000+) and a reboot.",
+    "descriptionFr": "Laisse le GPU gérer sa propre planification mémoire — latence réduite, requis pour la génération d'images DLSS. Nécessite un GPU/pilote compatible (GTX 1000+/RX 5000+) et un redémarrage.",
+    "category": "GPU",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": true,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers",
+        "name": "HwSchMode",
+        "kind": "DWord",
+        "enabledValue": "2",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "gpu_windowed_optim",
+    "nameEn": "Optimizations for windowed games + auto VRR",
+    "nameFr": "Optimisations des jeux fenêtrés + VRR auto",
+    "descriptionEn": "Uses the flip presentation model for DX10/11 windowed/borderless games (lower latency) and enables VRR optimisations.",
+    "descriptionFr": "Utilise le modèle de présentation « flip » pour les jeux DX10/11 en fenêtré/sans bordure (latence plus faible) et active les optimisations VRR.",
+    "category": "GPU",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\DirectX\\UserGpuPreferences",
+        "name": "DirectXUserGlobalSettings",
+        "kind": "String",
+        "enabledValue": "SwapEffectUpgradeEnable=1;VRROptimizeEnable=1;",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "gpu_mmcss_games",
+    "nameEn": "Boost MMCSS 'Games' task priority",
+    "nameFr": "Priorité MMCSS « Games » renforcée",
+    "descriptionEn": "Raises the Multimedia Class Scheduler priority for games (Priority 6, Scheduling High, SFIO High, GPU Priority 8).",
+    "descriptionFr": "Augmente la priorité du planificateur multimédia pour les jeux (Priority 6, Scheduling High, SFIO High, GPU Priority 8).",
+    "category": "GPU",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+        "name": "Priority",
+        "kind": "DWord",
+        "enabledValue": "6",
+        "disabledValue": "2"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+        "name": "Scheduling Category",
+        "kind": "String",
+        "enabledValue": "High",
+        "disabledValue": "Medium"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+        "name": "SFIO Priority",
+        "kind": "String",
+        "enabledValue": "High",
+        "disabledValue": "Normal"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+        "name": "GPU Priority",
+        "kind": "DWord",
+        "enabledValue": "8",
+        "disabledValue": "8"
+      }
+    ]
+  },
+  {
+    "id": "gpu_mpo_off",
+    "nameEn": "Disable Multiplane Overlay (MPO)",
+    "nameFr": "Désactiver le Multiplane Overlay (MPO)",
+    "descriptionEn": "Fixes flickering / black screens / stutter on some NVIDIA and multi-monitor setups. Only use it if you have those issues. Reboot required.",
+    "descriptionFr": "Corrige scintillements / écrans noirs / saccades sur certaines configs NVIDIA ou multi-écrans. À n'utiliser que si tu as ces problèmes. Redémarrage requis.",
+    "category": "GPU",
+    "risk": "caution",
+    "profiles": [],
+    "requiresReboot": true,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows\\Dwm",
+        "name": "OverlayTestMode",
+        "kind": "DWord",
+        "enabledValue": "5",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "cpu_priority_sep",
+    "nameEn": "Foreground priority boost (Win32PrioritySeparation)",
+    "nameFr": "Priorité au premier plan (Win32PrioritySeparation)",
+    "descriptionEn": "Short, fixed, 3x foreground quantum (0x26) so the game window gets more CPU time than background tasks.",
+    "descriptionFr": "Quantum court, fixe, x3 au premier plan (0x26) : la fenêtre du jeu obtient plus de temps CPU que les tâches de fond.",
+    "category": "CPU",
+    "risk": "caution",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\PriorityControl",
+        "name": "Win32PrioritySeparation",
+        "kind": "DWord",
+        "enabledValue": "38",
+        "disabledValue": "2"
+      }
+    ]
+  },
+  {
+    "id": "cpu_sys_responsiveness",
+    "nameEn": "System responsiveness for games (10%)",
+    "nameFr": "Réactivité système pour les jeux (10 %)",
+    "descriptionEn": "Reserves only 10% CPU for low-priority multimedia tasks instead of 20%.",
+    "descriptionFr": "Ne réserve que 10 % du CPU aux tâches multimédia basse priorité au lieu de 20 %.",
+    "category": "CPU",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+        "name": "SystemResponsiveness",
+        "kind": "DWord",
+        "enabledValue": "10",
+        "disabledValue": "20"
+      }
+    ]
+  },
+  {
+    "id": "cpu_timer_res",
+    "nameEn": "Global timer resolution requests",
+    "nameFr": "Résolution du timer globale",
+    "descriptionEn": "Restores pre-2004 behaviour where a game's high timer resolution applies system-wide (Windows 11). Can smooth frametimes in some games; slightly higher power usage.",
+    "descriptionFr": "Rétablit le comportement d'avant 2004 où la haute résolution du timer demandée par un jeu s'applique à tout le système (Windows 11). Peut lisser les frametimes ; consommation un peu plus élevée.",
+    "category": "CPU",
+    "risk": "caution",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": true,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel",
+        "name": "GlobalTimerResolutionRequests",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "cpu_memory_integrity_off",
+    "nameEn": "Disable Memory Integrity (HVCI)",
+    "nameFr": "Désactiver l'intégrité de la mémoire (HVCI)",
+    "descriptionEn": "⚠ DANGER: lowers Windows kernel protection against malware to gain a few % FPS. Some anti-cheats (Valorant/Vanguard, FACEIT) REQUIRE it on and will refuse to start. Only for advanced users. Reboot required.",
+    "descriptionFr": "⚠ DANGER : réduit la protection du noyau Windows contre les malwares pour gagner quelques % de FPS. Certains anti-triches (Valorant/Vanguard, FACEIT) l'EXIGENT et refuseront de démarrer. Réservé aux utilisateurs avancés. Redémarrage requis.",
+    "category": "CPU",
+    "risk": "danger",
+    "profiles": [],
+    "requiresReboot": true,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity",
+        "name": "Enabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      }
+    ]
+  },
+  {
+    "id": "mem_paging_exec",
+    "nameEn": "Keep kernel in RAM (DisablePagingExecutive)",
+    "nameFr": "Garder le noyau en RAM (DisablePagingExecutive)",
+    "descriptionEn": "Prevents drivers and kernel code from being paged to disk. Useful with 16 GB+ RAM. Reboot required.",
+    "descriptionFr": "Empêche les pilotes et le code noyau d'être déchargés sur le disque. Utile avec 16 Go de RAM ou plus. Redémarrage requis.",
+    "category": "Memory",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": true,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+        "name": "DisablePagingExecutive",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": "0"
+      }
+    ]
+  },
+  {
+    "id": "mem_compression_off",
+    "nameEn": "Disable memory compression",
+    "nameFr": "Désactiver la compression mémoire",
+    "descriptionEn": "Saves CPU cycles spent compressing RAM. Only with 32 GB+ RAM; with less memory it can make things worse.",
+    "descriptionFr": "Économise les cycles CPU passés à compresser la RAM. Uniquement avec 32 Go+ ; avec moins de mémoire ça peut empirer les choses.",
+    "category": "Memory",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": true,
+    "actions": [
+      {
+        "type": "Command",
+        "applyCommand": "Disable-MMAgent -MemoryCompression",
+        "revertCommand": "Enable-MMAgent -MemoryCompression",
+        "checkCommand": "(Get-MMAgent).MemoryCompression -eq $false"
+      }
+    ]
+  },
+  {
+    "id": "mem_pagefile_off",
+    "nameEn": "Disable the page file",
+    "nameFr": "Désactiver le fichier d'échange",
+    "descriptionEn": "⚠ DANGER: removes the page file. Games and apps can CRASH with 'out of memory' errors, and crash dumps stop working. Almost never improves FPS. Reboot required.",
+    "descriptionFr": "⚠ DANGER : supprime le fichier d'échange. Jeux et applis peuvent PLANTER avec des erreurs « mémoire insuffisante » et les vidages mémoire ne fonctionnent plus. N'améliore presque jamais les FPS. Redémarrage requis.",
+    "category": "Memory",
+    "risk": "danger",
+    "profiles": [],
+    "requiresReboot": true,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+        "name": "PagingFiles",
+        "kind": "MultiString",
+        "enabledValue": "",
+        "disabledValue": "?:\\pagefile.sys"
+      }
+    ]
+  },
+  {
+    "id": "net_throttling",
+    "nameEn": "Disable network throttling (NetworkThrottlingIndex)",
+    "nameFr": "Désactiver la limitation réseau (NetworkThrottlingIndex)",
+    "descriptionEn": "Removes the multimedia packet-rate limit Windows applies to non-multimedia traffic while audio/video is playing.",
+    "descriptionFr": "Supprime la limite de paquets que Windows applique au trafic réseau pendant la lecture audio/vidéo.",
+    "category": "Network",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+        "name": "NetworkThrottlingIndex",
+        "kind": "DWord",
+        "enabledValue": "4294967295",
+        "disabledValue": "10"
+      }
+    ]
+  },
+  {
+    "id": "net_nagle_off",
+    "nameEn": "Disable Nagle's algorithm (TcpAckFrequency / TCPNoDelay)",
+    "nameFr": "Désactiver l'algorithme de Nagle (TcpAckFrequency / TCPNoDelay)",
+    "descriptionEn": "Sends small TCP packets immediately on every network interface — lower latency in TCP-based online games (MMOs, LoL…).",
+    "descriptionFr": "Envoie immédiatement les petits paquets TCP sur chaque interface réseau — latence réduite dans les jeux en ligne TCP (MMO, LoL…).",
+    "category": "Network",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "RegistryPerInterface",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces",
+        "name": "TcpAckFrequency",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": null
+      },
+      {
+        "type": "RegistryPerInterface",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces",
+        "name": "TCPNoDelay",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": null
+      },
+      {
+        "type": "RegistryPerInterface",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces",
+        "name": "TcpDelAckTicks",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "net_qos_reserve",
+    "nameEn": "Free QoS reserved bandwidth",
+    "nameFr": "Libérer la bande passante réservée QoS",
+    "descriptionEn": "Sets the QoS Packet Scheduler reservable bandwidth limit to 0%.",
+    "descriptionFr": "Règle à 0 % la bande passante réservable du planificateur de paquets QoS.",
+    "category": "Network",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\Psched",
+        "name": "NonBestEffortLimit",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "net_msmq_nodelay",
+    "nameEn": "TCPNoDelay for MSMQ",
+    "nameFr": "TCPNoDelay pour MSMQ",
+    "descriptionEn": "Disables Nagle for the Message Queuing stack (used by some older games/launchers).",
+    "descriptionFr": "Désactive Nagle pour la pile Message Queuing (utilisée par certains vieux jeux/launchers).",
+    "category": "Network",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\MSMQ\\Parameters",
+        "name": "TCPNoDelay",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "net_do_p2p_off",
+    "nameEn": "Disable Delivery Optimization peer uploads",
+    "nameFr": "Désactiver le partage P2P de l'Optimisation de la distribution",
+    "descriptionEn": "Stops Windows Update from uploading updates to other PCs over your connection (bandwidth stolen during online games).",
+    "descriptionFr": "Empêche Windows Update d'envoyer des mises à jour à d'autres PC via ta connexion (bande passante volée en ligne).",
+    "category": "Network",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+        "name": "DODownloadMode",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "net_adapter_power",
+    "nameEn": "Disable network adapter power management",
+    "nameFr": "Désactiver la gestion d'énergie des cartes réseau",
+    "descriptionEn": "Prevents Windows from turning off Ethernet/Wi-Fi adapters to save power (fixes random disconnects / ping spikes).",
+    "descriptionFr": "Empêche Windows d'éteindre les cartes Ethernet/Wi-Fi pour économiser l'énergie (corrige déconnexions et pics de ping).",
+    "category": "Network",
+    "risk": "caution",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Command",
+        "applyCommand": "Get-NetAdapter -Physical | Disable-NetAdapterPowerManagement -NoRestart -EA SilentlyContinue",
+        "revertCommand": "Get-NetAdapter -Physical | Enable-NetAdapterPowerManagement -NoRestart -EA SilentlyContinue",
+        "checkCommand": "$p=Get-NetAdapter -Physical | Get-NetAdapterPowerManagement -EA SilentlyContinue; ($p | ? { $_.AllowComputerToTurnOffDevice -eq 'Enabled' }).Count -eq 0 -and $p.Count -gt 0"
+      }
+    ]
+  },
+  {
+    "id": "net_autotuning",
+    "nameEn": "TCP receive window auto-tuning: normal",
+    "nameFr": "Réglage auto de la fenêtre TCP : normal",
+    "descriptionEn": "Makes sure TCP auto-tuning is at its default 'normal' level (some 'optimizers' break it).",
+    "descriptionFr": "Vérifie que l'auto-réglage TCP est sur « normal » (certains « optimiseurs » le cassent).",
+    "category": "Network",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Command",
+        "applyCommand": "netsh.exe int tcp set global autotuninglevel=normal",
+        "revertCommand": "netsh.exe int tcp set global autotuninglevel=normal",
+        "checkCommand": "(Get-NetTCPSetting -SettingName Internet -EA SilentlyContinue).AutoTuningLevelLocal -eq 'Normal'"
+      }
+    ]
+  },
+  {
+    "id": "vis_transparency_off",
+    "nameEn": "Disable transparency effects",
+    "nameFr": "Désactiver les effets de transparence",
+    "descriptionEn": "Removes acrylic/blur on taskbar and Start — frees a bit of GPU for low-end PCs.",
+    "descriptionFr": "Retire l'effet acrylique/flou de la barre des tâches et du menu Démarrer — libère un peu de GPU sur les petites configs.",
+    "category": "Visuals",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+        "name": "EnableTransparency",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      }
+    ]
+  },
+  {
+    "id": "vis_animations_off",
+    "nameEn": "Disable window and taskbar animations",
+    "nameFr": "Désactiver les animations des fenêtres et de la barre des tâches",
+    "descriptionEn": "Snappier Alt-Tab and minimise/maximise.",
+    "descriptionFr": "Alt-Tab et réduction/agrandissement plus vifs.",
+    "category": "Visuals",
+    "risk": "safe",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Desktop\\WindowMetrics",
+        "name": "MinAnimate",
+        "kind": "String",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+        "name": "TaskbarAnimations",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      }
+    ]
+  },
+  {
+    "id": "vis_best_perf",
+    "nameEn": "Visual effects: adjust for best performance",
+    "nameFr": "Effets visuels : ajuster pour de meilleures performances",
+    "descriptionEn": "Switches 'Performance Options' to best performance (may require sign-out).",
+    "descriptionFr": "Passe les « Options de performances » sur meilleures performances (déconnexion parfois nécessaire).",
+    "category": "Visuals",
+    "risk": "safe",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects",
+        "name": "VisualFXSetting",
+        "kind": "DWord",
+        "enabledValue": "2",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "vis_menu_delay",
+    "nameEn": "Instant menus (MenuShowDelay 0)",
+    "nameFr": "Menus instantanés (MenuShowDelay 0)",
+    "descriptionEn": "Removes the 400 ms delay before submenus open.",
+    "descriptionFr": "Supprime le délai de 400 ms avant l'ouverture des sous-menus.",
+    "category": "Visuals",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Desktop",
+        "name": "MenuShowDelay",
+        "kind": "String",
+        "enabledValue": "0",
+        "disabledValue": "400"
+      }
+    ]
+  },
+  {
+    "id": "in_mouse_accel_off",
+    "nameEn": "Disable mouse acceleration (Enhance pointer precision)",
+    "nameFr": "Désactiver l'accélération souris (Améliorer la précision)",
+    "descriptionEn": "1:1 raw mouse movement — essential for consistent aim in shooters.",
+    "descriptionFr": "Mouvement souris 1:1 — indispensable pour une visée constante dans les FPS.",
+    "category": "Input",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Mouse",
+        "name": "MouseSpeed",
+        "kind": "String",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Mouse",
+        "name": "MouseThreshold1",
+        "kind": "String",
+        "enabledValue": "0",
+        "disabledValue": "6"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Mouse",
+        "name": "MouseThreshold2",
+        "kind": "String",
+        "enabledValue": "0",
+        "disabledValue": "10"
+      }
+    ]
+  },
+  {
+    "id": "in_sticky_keys",
+    "nameEn": "Disable Sticky/Filter/Toggle keys shortcuts",
+    "nameFr": "Désactiver les raccourcis Touches rémanentes/filtres/bascule",
+    "descriptionEn": "No more Sticky Keys popup after pressing Shift 5 times mid-game.",
+    "descriptionFr": "Plus de popup des touches rémanentes après 5 appuis sur Maj en pleine partie.",
+    "category": "Input",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Accessibility\\StickyKeys",
+        "name": "Flags",
+        "kind": "String",
+        "enabledValue": "506",
+        "disabledValue": "510"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Accessibility\\ToggleKeys",
+        "name": "Flags",
+        "kind": "String",
+        "enabledValue": "58",
+        "disabledValue": "62"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Accessibility\\Keyboard Response",
+        "name": "Flags",
+        "kind": "String",
+        "enabledValue": "122",
+        "disabledValue": "126"
+      }
+    ]
+  },
+  {
+    "id": "in_keyboard_delay",
+    "nameEn": "Fastest keyboard repeat delay",
+    "nameFr": "Délai de répétition clavier minimal",
+    "descriptionEn": "Shortest delay before a held key repeats.",
+    "descriptionFr": "Délai minimal avant qu'une touche maintenue se répète.",
+    "category": "Input",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Keyboard",
+        "name": "KeyboardDelay",
+        "kind": "String",
+        "enabledValue": "0",
+        "disabledValue": "1"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Keyboard",
+        "name": "KeyboardSpeed",
+        "kind": "String",
+        "enabledValue": "31",
+        "disabledValue": "31"
+      }
+    ]
+  },
+  {
+    "id": "bg_background_apps",
+    "nameEn": "Disable background Store apps",
+    "nameFr": "Désactiver les applis Store en arrière-plan",
+    "descriptionEn": "Prevents UWP/Store apps from running in the background.",
+    "descriptionFr": "Empêche les applis UWP/Store de tourner en arrière-plan.",
+    "category": "Background",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications",
+        "name": "GlobalUserDisabled",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": "0"
+      },
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "name": "BackgroundAppGlobalToggle",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "bg_store_autoupdate",
+    "nameEn": "Disable automatic Store app updates",
+    "nameFr": "Désactiver les mises à jour auto du Store",
+    "descriptionEn": "Stops Store apps updating (and eating bandwidth/disk) while you play. Update manually from the Store.",
+    "descriptionFr": "Empêche les applis du Store de se mettre à jour (bande passante/disque) pendant que tu joues. Mets à jour manuellement.",
+    "category": "Background",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Policies\\Microsoft\\WindowsStore",
+        "name": "AutoDownload",
+        "kind": "DWord",
+        "enabledValue": "2",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "bg_edge_boost",
+    "nameEn": "Disable Edge startup boost & background mode",
+    "nameFr": "Désactiver le démarrage anticipé et l'arrière-plan d'Edge",
+    "descriptionEn": "Stops Microsoft Edge from preloading at sign-in and running after you close it.",
+    "descriptionFr": "Empêche Microsoft Edge de se précharger à l'ouverture de session et de rester actif après fermeture.",
+    "category": "Background",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+        "name": "StartupBoostEnabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      },
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+        "name": "BackgroundModeEnabled",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "bg_startup_delay",
+    "nameEn": "Remove startup apps delay",
+    "nameFr": "Supprimer le délai des applis au démarrage",
+    "descriptionEn": "Startup apps launch immediately instead of being delayed — the desktop is usable sooner.",
+    "descriptionFr": "Les applis de démarrage se lancent tout de suite — bureau utilisable plus vite.",
+    "category": "Background",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize",
+        "name": "StartupDelayInMSec",
+        "kind": "DWord",
+        "enabledValue": "0",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "bg_sysmain_off",
+    "nameEn": "Disable SysMain (Superfetch)",
+    "nameFr": "Désactiver SysMain (Superfetch)",
+    "descriptionEn": "Stops RAM preloading and its disk activity. Helps on HDDs / low RAM; on SSD + 16 GB it rarely matters and app launches may get slower.",
+    "descriptionFr": "Arrête le préchargement RAM et l'activité disque associée. Utile sur disque dur / peu de RAM ; sur SSD + 16 Go ça change peu et les applis peuvent démarrer plus lentement.",
+    "category": "Background",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Service",
+        "target": "SysMain",
+        "enabledValue": "4",
+        "disabledValue": "2"
+      }
+    ]
+  },
+  {
+    "id": "bg_search_index_off",
+    "nameEn": "Disable Windows Search indexing",
+    "nameFr": "Désactiver l'indexation Windows Search",
+    "descriptionEn": "Stops the indexer's background disk/CPU usage. Start menu and Explorer search become slower.",
+    "descriptionFr": "Arrête l'utilisation disque/CPU de l'indexeur. La recherche du menu Démarrer et de l'explorateur sera plus lente.",
+    "category": "Background",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Service",
+        "target": "WSearch",
+        "enabledValue": "4",
+        "disabledValue": "2"
+      }
+    ]
+  },
+  {
+    "id": "bg_spooler_off",
+    "nameEn": "Disable Print Spooler",
+    "nameFr": "Désactiver le spouleur d'impression",
+    "descriptionEn": "Only if you never print. Printing will stop working until reverted.",
+    "descriptionFr": "Uniquement si tu n'imprimes jamais. L'impression ne fonctionnera plus jusqu'à l'annulation.",
+    "category": "Background",
+    "risk": "caution",
+    "profiles": [],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Service",
+        "target": "Spooler",
+        "enabledValue": "4",
+        "disabledValue": "2"
+      }
+    ]
+  },
+  {
+    "id": "bg_fax_off",
+    "nameEn": "Disable Fax service",
+    "nameFr": "Désactiver le service Fax",
+    "descriptionEn": "Nobody games on a fax.",
+    "descriptionFr": "Personne ne joue sur un fax.",
+    "category": "Background",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Service",
+        "target": "Fax",
+        "enabledValue": "4",
+        "disabledValue": "3"
+      }
+    ]
+  },
+  {
+    "id": "bg_maps_off",
+    "nameEn": "Disable Downloaded Maps Manager",
+    "nameFr": "Désactiver le gestionnaire de cartes téléchargées",
+    "descriptionEn": "Stops the offline maps service from checking for updates in the background.",
+    "descriptionFr": "Empêche le service de cartes hors ligne de chercher des mises à jour en arrière-plan.",
+    "category": "Background",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Service",
+        "target": "MapsBroker",
+        "enabledValue": "4",
+        "disabledValue": "2"
+      }
+    ]
+  },
+  {
+    "id": "bg_maintenance_off",
+    "nameEn": "Disable automatic maintenance",
+    "nameFr": "Désactiver la maintenance automatique",
+    "descriptionEn": "Stops idle maintenance (defrag/scan/updates) from kicking in during long sessions. Run maintenance manually from time to time.",
+    "descriptionFr": "Empêche la maintenance automatique (défrag/analyse/mises à jour) de se lancer pendant les longues sessions. Lance-la manuellement de temps en temps.",
+    "category": "Background",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance",
+        "name": "MaintenanceDisabled",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": null
+      }
+    ]
+  },
+  {
+    "id": "bg_winsat_task",
+    "nameEn": "Disable WinSAT scheduled assessment",
+    "nameFr": "Désactiver l'évaluation planifiée WinSAT",
+    "descriptionEn": "Stops the Windows System Assessment Tool benchmark task from running in the background.",
+    "descriptionFr": "Empêche la tâche de benchmark WinSAT de tourner en arrière-plan.",
+    "category": "Background",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Command",
+        "applyCommand": "Disable-ScheduledTask -TaskPath '\\Microsoft\\Windows\\Maintenance\\' -TaskName 'WinSAT' -EA Stop | Out-Null",
+        "revertCommand": "Enable-ScheduledTask -TaskPath '\\Microsoft\\Windows\\Maintenance\\' -TaskName 'WinSAT' -EA Stop | Out-Null",
+        "checkCommand": "$t=Get-ScheduledTask -TaskPath '\\Microsoft\\Windows\\Maintenance\\' -TaskName 'WinSAT' -EA SilentlyContinue; ($null -eq $t) -or ($t.State -eq 'Disabled')"
+      }
+    ]
+  },
+  {
+    "id": "sto_last_access",
+    "nameEn": "Disable NTFS last-access timestamps",
+    "nameFr": "Désactiver l'horodatage du dernier accès NTFS",
+    "descriptionEn": "Avoids a disk write every time a file is read (thousands per game load).",
+    "descriptionFr": "Évite une écriture disque à chaque lecture de fichier (des milliers par chargement de jeu).",
+    "category": "Storage",
+    "risk": "safe",
+    "profiles": [
+      "recommended",
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+        "name": "NtfsDisableLastAccessUpdate",
+        "kind": "DWord",
+        "enabledValue": "2147483649",
+        "disabledValue": "2147483650"
+      }
+    ]
+  },
+  {
+    "id": "sto_8dot3",
+    "nameEn": "Disable 8.3 short filename creation",
+    "nameFr": "Désactiver la création des noms courts 8.3",
+    "descriptionEn": "Speeds up file creation in large folders (game installs/updates). Existing short names are kept.",
+    "descriptionFr": "Accélère la création de fichiers dans les gros dossiers (installations/mises à jour de jeux). Les noms courts existants sont conservés.",
+    "category": "Storage",
+    "risk": "safe",
+    "profiles": [
+      "competitive",
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKLM",
+        "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+        "name": "NtfsDisable8dot3NameCreation",
+        "kind": "DWord",
+        "enabledValue": "1",
+        "disabledValue": "2"
+      }
+    ]
+  },
+  {
+    "id": "sto_auto_end_tasks",
+    "nameEn": "Auto-close hung apps at shutdown",
+    "nameFr": "Fermer automatiquement les applis bloquées à l'arrêt",
+    "descriptionEn": "Windows won't wait for frozen apps at shutdown/restart. Unsaved work in a frozen app is lost.",
+    "descriptionFr": "Windows n'attend plus les applis gelées à l'arrêt. Le travail non enregistré d'une appli gelée est perdu.",
+    "category": "Storage",
+    "risk": "caution",
+    "profiles": [
+      "extreme"
+    ],
+    "requiresReboot": false,
+    "actions": [
+      {
+        "type": "Registry",
+        "hive": "HKCU",
+        "path": "Control Panel\\Desktop",
+        "name": "AutoEndTasks",
+        "kind": "String",
+        "enabledValue": "1",
+        "disabledValue": null
+      }
+    ]
+  }
+]

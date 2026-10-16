@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="WinBoost.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Custom title bar -->
+        <Grid x:Name="AppTitleBar" Padding="16,0,140,0">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Image x:Name="TitleLogo" Width="18" Height="18" />
+                <TextBlock x:Name="TitleText" Text="WinBoost" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Top action bar -->
+        <Border Grid.Row="1" Padding="16,8" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="ApplyButton" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind VM.ApplyCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE73E;" FontSize="14" />
+                            <TextBlock x:Name="ApplyText" />
+                            <InfoBadge x:Name="PendingBadge" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="RevertButton" Command="{x:Bind VM.RevertAllCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE7A7;" FontSize="14" />
+                            <TextBlock x:Name="RevertText" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="RefreshButton" Command="{x:Bind VM.RefreshCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                            <TextBlock x:Name="RefreshText" />
+                        </StackPanel>
+                    </Button>
+                    <ProgressRing IsActive="{x:Bind VM.IsBusy, Mode=OneWay}" Width="20" Height="20" Margin="8,0,0,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
+                    <ToggleSwitch x:Name="RpToggle" IsOn="{x:Bind VM.RestorePointBeforeApply, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" />
+                    <ToggleSwitch x:Name="AutoToggle" IsOn="{x:Bind VM.AutoReapply, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0"
+                                  IsEnabled="{x:Bind VM.IsIdle, Mode=OneWay}" />
+                    <Button x:Name="LangButton" Click="OnLanguageClick" MinWidth="44" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <NavigationView x:Name="Nav" Grid.Row="2"
+                        PaneDisplayMode="Left" IsBackButtonVisible="Collapsed" IsSettingsVisible="False"
+                        OpenPaneLength="220" SelectionChanged="OnNavSelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="NavDashboard" Tag="dashboard" Icon="Home" />
+                <NavigationViewItem x:Name="NavSettings" Tag="settings">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE9E9;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavProfiles" Tag="profiles">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE7FC;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavStartup" Tag="startup">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE7B5;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavBoost" Tag="boost">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE945;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem x:Name="NavAbout" Tag="about">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE946;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+    </Grid>
+</Window>

@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+publish/
+setup/
+*.exe
+*.zip
+*.sha256
+*.pdb

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>WinBoost (small sizes: no ticks, no glow, heavier strokes)</title>
+  <defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="96" y1="400" x2="420" y2="130">
+      <stop offset="0" stop-color="#22E5FF"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+  <path d="M114.58 397.42 A200 200 0 1 1 397.42 397.42" fill="none" stroke="url(#g)" stroke-width="64" stroke-linecap="round"/>
+  <path d="M304 92 L150 296 L240 296 L200 436 L366 214 L272 214 Z" fill="url(#g)" stroke="url(#g)" stroke-width="20" stroke-linejoin="round"/>
+</svg>
