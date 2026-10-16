@@ -69,6 +69,8 @@ public sealed partial class MainWindow : Window
         VM.ConfirmAsync = ConfirmAsync;
         VM.BatchFinished += OnBatchFinished;
         VM.RebootSuggested += OnRebootSuggested;
+        var testArg = Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith("--test-batch=", StringComparison.OrdinalIgnoreCase));
+        if (testArg is not null) _ = TestBatchAsync(testArg["--test-batch=".Length..]);
         if (Environment.GetCommandLineArgs().Any(a => a.Equals("--bench-apply", StringComparison.OrdinalIgnoreCase)))
             _ = BenchAsync();
         AppWindow.Closing += OnAppWindowClosing;
@@ -167,6 +169,27 @@ public sealed partial class MainWindow : Window
             }
         }
         catch (Exception ex) { AppLog.Error("[bench]", ex); }
+    }
+
+    /// <summary>Diagnostic (--test-batch=apply|revert:id1,id2): really applies or reverts the listed tweaks through the
+    /// normal batch engine (no restore point) and logs each result plus a full re-detection afterwards.</summary>
+    private async Task TestBatchAsync(string spec)
+    {
+        try
+        {
+            await Task.Delay(5000);
+            var parts = spec.Split(':', 2);
+            bool apply = parts[0].Equals("apply", StringComparison.OrdinalIgnoreCase);
+            var ids = parts[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var items = VM.Settings.Where(s => ids.Contains(s.Id)).Select(s => new TweakEngine.BatchItem(s.Model, apply)).ToList();
+            AppLog.Info($"[test] {(apply ? "apply" : "revert")} {items.Count} tweaks");
+            var engine = new TweakEngine();
+            var res = await Task.Run(() => engine.RunBatchAsync(items, m => AppLog.Info("[test] " + m)));
+            AppLog.Info($"[test] result: {res.Count(r => r.Ok)} OK, {res.Count(r => !r.Ok)} failed; applied now: {string.Join(",", res.Where(r => r.AppliedNow).Select(r => r.Id))}");
+            var det = await Task.Run(() => engine.DetectAllAsync(items.Select(i => i.Setting).ToList()));
+            AppLog.Info($"[test] independent re-detect: applied {string.Join(",", det.Where(d => d.Value).Select(d => d.Key))}");
+        }
+        catch (Exception ex) { AppLog.Error("[test]", ex); }
     }
 
     private bool _closeConfirmed;

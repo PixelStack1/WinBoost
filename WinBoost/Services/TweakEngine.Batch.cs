@@ -28,6 +28,9 @@ public sealed partial class TweakEngine
     {
         public required BatchItem Item;
         public int Failed;
+        /// <summary>Revert found nothing WinBoost had changed (no recorded original, service absent, command identical
+        /// to Windows' default): the current value IS the user's own, so "still detected" is not a failure.</summary>
+        public volatile bool Untouched;
         public string? Error;
         public void Fail(string msg) { Interlocked.Increment(ref Failed); Error ??= msg; }
     }
@@ -63,7 +66,7 @@ public sealed partial class TweakEngine
                             case ActionType.Service:
                             {
                                 string p = $@"{ServicesPath}\{a.Target}";
-                                if (!_reg.KeyExists("HKLM", p)) { AppLog.Info($"Service {a.Target} not present, skipped"); break; }
+                                if (!_reg.KeyExists("HKLM", p)) { AppLog.Info($"Service {a.Target} not present, skipped"); if (!st.Item.Apply) st.Untouched = true; break; }
                                 if (DryRun) { _reg.Snapshot("HKLM", p, "Start"); svcOps.Add((st, a.Target!, true)); }
                                 else if (st.Item.Apply)
                                 {
@@ -96,7 +99,7 @@ public sealed partial class TweakEngine
             var powerTask = Task.Run(async () =>
             {
                 var t = Stopwatch.StartNew();
-                (DryRun ? DryPowerAsync(states) : RunPowerChainAsync(states)).ConfigureAwait(false);
+                await (DryRun ? DryPowerAsync(states) : RunPowerChainAsync(states)).ConfigureAwait(false);
                 tPower = t.ElapsedMilliseconds; progress?.Invoke(0.6);
                 // verification reads for plan/power start right away, overlapping the PowerShell snippets
                 var tv0 = Stopwatch.StartNew();
@@ -140,10 +143,12 @@ public sealed partial class TweakEngine
                     if (!await IsActionAppliedAsync(a, ctx).ConfigureAwait(false)) { now = false; break; }
             }
             catch (Exception ex) { AppLog.Warn($"verify {st.Item.Setting.Id}: {ex.Message}"); }
-            bool ok = st.Failed == 0 && (DryRun || now == st.Item.Apply);
+            bool untouched = !st.Item.Apply && now && st.Untouched;
+            bool ok = st.Failed == 0 && (DryRun || now == st.Item.Apply || untouched);
             string? err = st.Error ?? (ok ? null : Loc.T(st.Item.Apply ? "Apply.NotEffective" : "Apply.StillApplied"));
+            if (ok && untouched) { err = Loc.T("Revert.AlreadyDefault"); log("  ℹ " + Loc.Pick(st.Item.Setting.NameEn, st.Item.Setting.NameFr) + " : " + err); }
             results.Add(new BatchResult(st.Item.Setting.Id, ok, now, err));
-            AppLog.Info($"[apply] {(st.Item.Apply ? "apply" : "revert")} {st.Item.Setting.Id}: {(ok ? "OK" : "FAILED")}{(err is null ? "" : " - " + err)}");
+            AppLog.Info($"[apply] {(st.Item.Apply ? "apply" : "revert")} {st.Item.Setting.Id}: {(ok ? (untouched ? "OK (unchanged: already the system's own value)" : "OK") : "FAILED")}{(err is null || untouched ? "" : " - " + err)}");
         }
         progress?.Invoke(1);
         AppLog.Info($"[perf] batch {items.Count} items in {sw.ElapsedMilliseconds} ms (registry {tReg} ms, powershell {tPs} ms, powercfg {tPower} ms, services {tSvc} ms, verify {tv.ElapsedMilliseconds} ms + {tVerPow} ms overlapped)");
@@ -180,6 +185,7 @@ public sealed partial class TweakEngine
             foreach (var a in st.Item.Setting.Actions.Where(a => a.Type == ActionType.Command))
             {
                 string? sc = dryRun ? a.CheckCommand : st.Item.Apply ? a.ApplyCommand : a.RevertCommand;
+                if (!dryRun && !st.Item.Apply && (string.IsNullOrWhiteSpace(a.RevertCommand) || a.RevertCommand == a.ApplyCommand)) st.Untouched = true;
                 if (!string.IsNullOrWhiteSpace(sc)) jobs.Add((st, a, sc!));
             }
         if (jobs.Count == 0) return;
@@ -225,6 +231,7 @@ public sealed partial class TweakEngine
         var power = states.SelectMany(s => s.Item.Setting.Actions.Where(a => a.Type == ActionType.PowerSetting && a.Subgroup is not null && a.SettingGuid is not null).Select(a => (St: s, A: a))).ToList();
         if (plan.Count == 0 && power.Count == 0) return;
         bool changed = false;
+        bool planReverted = plan.Any(p => !p.St.Item.Apply);
 
         async Task SetIndex(ItemState st, SettingAction a, uint v)
         {
@@ -239,9 +246,12 @@ public sealed partial class TweakEngine
             {
                 string key = $"power|{a.Subgroup}|{a.SettingGuid}".ToLowerInvariant();
                 var orig = OriginalStore.Get(key);
-                if (orig?.Value is null) { AppLog.Info($"No original for {a.SettingGuid}; left as is"); continue; }
+                if (orig?.Value is null) { AppLog.Info($"No original for {a.SettingGuid}; left as is (value never changed by WinBoost on this plan)"); st.Untouched = true; continue; }
                 await SetIndex(st, a, uint.Parse(orig.Value, CultureInfo.InvariantCulture)).ConfigureAwait(false);
                 OriginalStore.Forget(key);
+                // Restoring the very value we'd set, or leaving the WinBoost plan for the user's own plan (whose values
+                // WinBoost never touched), means the value detected afterwards is the user's own — not a failed revert.
+                if (orig.Value == a.EnabledValue || planReverted) st.Untouched = true;
             }
             catch (Exception ex) { st.Fail(ex.Message); }
         }
