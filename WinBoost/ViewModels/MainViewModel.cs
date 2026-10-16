@@ -106,7 +106,8 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception ex) { AppLog.Error("auto toggle", ex); }
     }
 
-    public int CountByRisk(Risk r) => Settings.Count(s => s.Risk == r && s.IsApplied);
+    public int CountByRisk(Risk r) => Settings.Count(s => s.Risk == r && s.IsAppliedByWinBoost);
+    [ObservableProperty] private int _nativeCount;
 
     public void RebuildGroups()
     {
@@ -123,9 +124,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void UpdateCounts()
     {
-        AppliedCount = Settings.Count(s => s.IsApplied);
+        AppliedCount = Settings.Count(s => s.IsAppliedByWinBoost);
+        NativeCount = Settings.Count(s => s.IsNative);
         PendingCount = Settings.Count(s => s.IsPending);
-        AppliedPercent = Total == 0 ? 0 : 100.0 * AppliedCount / Total;
+        AppliedPercent = Total == 0 ? 0 : 100.0 * (AppliedCount + NativeCount) / Total;
     }
 
     public void AddLog(string msg)
@@ -152,10 +154,12 @@ public sealed partial class MainViewModel : ObservableObject
             _programmatic = true;
             try
             {
+                string? scheme = await Task.Run(_engine.ActiveSchemeAsync);
                 foreach (var vm in Settings)
                 {
                     bool applied = results.TryGetValue(vm.Id, out var a) && a;
                     vm.IsApplied = applied; vm.IsOn = applied;
+                    vm.Native = applied ? _engine.GetNativeState(vm.Model, scheme) : NativeState.None;
                 }
             }
             finally { _programmatic = false; }
@@ -163,7 +167,8 @@ public sealed partial class MainViewModel : ObservableObject
             AutoReapply = await autoTask;
             _loadingAuto = false;
             UpdateCounts();
-            AddLog(Loc.F("Log.Refreshed", AppliedCount, Total));
+            AddLog(Loc.F("Log.Refreshed", AppliedCount, Total) + (NativeCount > 0 ? " " + Loc.F("Native.Count", NativeCount) : ""));
+            AppLog.Info($"[native] {string.Join(",", Settings.Where(s => s.IsNative).Select(s => s.Id + "=" + s.Native))}");
             AppLog.Info($"[perf] refresh total {sw.ElapsedMilliseconds} ms");
         }
         catch (Exception ex) { AppLog.Error("Refresh failed", ex); AddLog(ex.Message); }
@@ -185,8 +190,8 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task ApplyCoreAsync()
     {
         AppLog.Info($"[apply] clicked: pending {PendingCount}, busy {IsBusy}");
-        var toApply = Settings.Where(s => s.IsOn && !s.IsApplied).ToList();
-        var toRevert = Settings.Where(s => !s.IsOn && s.IsApplied).ToList();
+        var toApply = Settings.Where(s => !s.IsNative && s.IsOn && !s.IsApplied).ToList();
+        var toRevert = Settings.Where(s => !s.IsNative && !s.IsOn && s.IsApplied).ToList();
         if (toApply.Count + toRevert.Count == 0) { AddLog(Loc.T("Log.NothingPending")); return; }
 
         var danger = toApply.Where(s => s.Risk == Risk.Danger).ToList();
@@ -203,7 +208,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanRun))]
     public async Task RevertAllAsync()
     {
-        var applied = Settings.Where(s => s.IsApplied).ToList();
+        var applied = Settings.Where(s => s.IsAppliedByWinBoost).ToList();
         if (applied.Count == 0) { AddLog(Loc.T("Log.NothingPending")); return; }
         if (ConfirmAsync is not null && !await ConfirmAsync(Loc.T("Dlg.RevertTitle"), Loc.T("Dlg.RevertBody"))) return;
         _programmatic = true;
@@ -215,7 +220,7 @@ public sealed partial class MainViewModel : ObservableObject
     public async Task SelectProfileAsync(string profile, bool applyNow)
     {
         foreach (var s in Settings)
-            if (s.Risk != Risk.Danger && s.Model.Profiles.Contains(profile, StringComparer.OrdinalIgnoreCase)) s.IsOn = true;
+            if (!s.IsNative && s.Risk != Risk.Danger && s.Model.Profiles.Contains(profile, StringComparer.OrdinalIgnoreCase)) s.IsOn = true;
         AddLog(Loc.F("Log.Profile", Loc.T("Prof." + profile)));
         if (applyNow) await ApplyAsync();
     }
@@ -280,11 +285,15 @@ public sealed partial class MainViewModel : ObservableObject
                 .Concat(apply.Select(s => new TweakEngine.BatchItem(s.Model, true))).ToList();
             var results = await Task.Run(() => _engine.RunBatchAsync(items, Report, Progress));
             var byId = Settings.ToDictionary(s => s.Id);
+            string? schemeNow = await Task.Run(_engine.ActiveSchemeAsync);
             var rebootNames = new List<string>();
             foreach (var r in results)
             {
                 if (!byId.TryGetValue(r.Id, out var s)) continue;
-                Programmatic(() => { s.IsApplied = r.AppliedNow; s.IsOn = r.AppliedNow; });
+                var native = r.AppliedNow ? _engine.GetNativeState(s.Model, schemeNow) : NativeState.None;
+                Programmatic(() => { s.IsApplied = r.AppliedNow; s.IsOn = r.AppliedNow; s.Native = native; });
+                // A revert that left the switch ON must say why (never flip back silently)
+                if (!apply.Contains(s) && r.AppliedNow && r.Ok) AddLog($"  ℹ {s.Name} : {s.NativeText}");
                 if (r.Ok) ok++; else { bad++; failed.Add(s.Name); AddLog($"  ✖ {s.Name}: {r.Error}"); }
                 bool wasApply = apply.Contains(s);
                 if (wasApply && r.AppliedNow && s.Model.RequiresReboot) { RebootNeeded = true; rebootNames.Add(s.Name); }

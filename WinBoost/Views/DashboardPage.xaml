@@ -16,6 +16,7 @@
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="AppliedLabel" Opacity="0.7" />
                         <TextBlock x:Name="AppliedValue" FontSize="40" FontWeight="SemiBold" />
+                        <TextBlock x:Name="AppliedNative" FontSize="13" Opacity="0.75" />
                         <ProgressBar x:Name="AppliedBar" Maximum="100" Foreground="{StaticResource BoostAccentBrush}" />
                     </StackPanel>
                 </Border>

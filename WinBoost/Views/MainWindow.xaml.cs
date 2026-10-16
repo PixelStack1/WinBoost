@@ -69,6 +69,8 @@ public sealed partial class MainWindow : Window
         VM.ConfirmAsync = ConfirmAsync;
         VM.BatchFinished += OnBatchFinished;
         VM.RebootSuggested += OnRebootSuggested;
+        if (Environment.GetCommandLineArgs().Any(a => a.Equals("--open-settings", StringComparison.OrdinalIgnoreCase)))
+            DispatcherQueue.TryEnqueue(async () => { await Task.Delay(3500); Nav.SelectedItem = NavSettings; });
         var testArg = Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith("--test-batch=", StringComparison.OrdinalIgnoreCase));
         if (testArg is not null) _ = TestBatchAsync(testArg["--test-batch=".Length..]);
         if (Environment.GetCommandLineArgs().Any(a => a.Equals("--bench-apply", StringComparison.OrdinalIgnoreCase)))

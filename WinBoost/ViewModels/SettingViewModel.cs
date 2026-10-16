@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using WinBoost.Localization;
 using WinBoost.Models;
+using WinBoost.Services;
 
 namespace WinBoost.ViewModels;
 
@@ -38,12 +39,31 @@ public sealed partial class SettingViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsPending), nameof(PendingVisibility))]
     private bool _isOn;
 
-    public bool IsPending => IsOn != IsApplied;
+    /// <summary>Applied but not by WinBoost: the PC's own value already is the optimized one (nothing to undo).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPending), nameof(PendingVisibility), nameof(IsNative), nameof(CanToggle), nameof(NativeVisibility), nameof(NativeText), nameof(NativeTip))]
+    private NativeState _native;
+
+    public bool IsNative => Native != NativeState.None;
+    public bool CanToggle => !IsNative;
+    public Visibility NativeVisibility => IsNative ? Visibility.Visible : Visibility.Collapsed;
+    public string NativeText => Native == NativeState.NotInstalled ? Loc.T("Native.NotInstalled") : Loc.T("Native.Optimal");
+    public string? NativeTip => Native switch
+    {
+        NativeState.NotInstalled => Loc.T("Native.NotInstalledTip"),
+        NativeState.AlreadyOptimal => Loc.T("Native.OptimalTip"),
+        _ => null
+    };
+    /// <summary>Applied by WinBoost (counts in the dashboard).</summary>
+    public bool IsAppliedByWinBoost => IsApplied && !IsNative;
+
+    public bool IsPending => !IsNative && IsOn != IsApplied;
     public Visibility PendingVisibility => IsPending ? Visibility.Visible : Visibility.Collapsed;
     public string PendingText => Loc.T("Set.Pending");
 
     partial void OnIsOnChanged(bool value) => PendingChanged?.Invoke();
     partial void OnIsAppliedChanged(bool value) => PendingChanged?.Invoke();
+    partial void OnNativeChanged(NativeState value) => PendingChanged?.Invoke();
     public event Action? PendingChanged;
 
     public bool Matches(string filter) => string.IsNullOrWhiteSpace(filter)
@@ -55,6 +75,7 @@ public sealed partial class SettingViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(Name)); OnPropertyChanged(nameof(Description)); OnPropertyChanged(nameof(RiskText));
         OnPropertyChanged(nameof(RebootText)); OnPropertyChanged(nameof(PendingText));
+        OnPropertyChanged(nameof(NativeText)); OnPropertyChanged(nameof(NativeTip));
     }
 }
 

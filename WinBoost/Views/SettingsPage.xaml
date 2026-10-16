@@ -57,11 +57,14 @@
                                                         <Border Style="{StaticResource BadgeStyle}" Background="{StaticResource BoostAccentBrush}" Visibility="{x:Bind PendingVisibility, Mode=OneWay}">
                                                             <TextBlock Text="{x:Bind PendingText, Mode=OneWay}" FontSize="11" />
                                                         </Border>
+                                                        <Border Style="{StaticResource BadgeStyle}" Background="#3322E5FF" Visibility="{x:Bind NativeVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind NativeTip, Mode=OneWay}">
+                                                            <TextBlock Text="{x:Bind NativeText, Mode=OneWay}" FontSize="11" />
+                                                        </Border>
                                                         <TextBlock Text="{x:Bind Name, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" TextWrapping="Wrap" />
                                                     </StackPanel>
                                                     <TextBlock Text="{x:Bind Description, Mode=OneWay}" Opacity="0.7" TextWrapping="Wrap" FontSize="13" />
                                                 </StackPanel>
-                                                <ToggleSwitch Grid.Column="1" IsOn="{x:Bind IsOn, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" VerticalAlignment="Center" />
+                                                <ToggleSwitch Grid.Column="1" IsOn="{x:Bind IsOn, Mode=TwoWay}" IsEnabled="{x:Bind CanToggle, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind NativeTip, Mode=OneWay}" OnContent="" OffContent="" MinWidth="0" VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
                 </DataTemplate>

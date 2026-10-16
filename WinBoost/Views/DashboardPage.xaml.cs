@@ -34,6 +34,7 @@ public sealed partial class DashboardPage : Page
         HeaderText.Text = Loc.T("Nav.Dashboard");
         AppliedLabel.Text = Loc.T("Dash.Applied");
         AppliedValue.Text = $"{VM.AppliedCount} / {VM.Total}";
+        AppliedNative.Text = VM.NativeCount > 0 ? Loc.F("Native.Count", VM.NativeCount) : "";
         AppliedBar.Value = VM.AppliedPercent;
         PendingLabel.Text = Loc.T("Dash.Pending");
         PendingValue.Text = VM.PendingCount.ToString();
