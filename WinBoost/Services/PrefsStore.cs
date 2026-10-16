@@ -7,6 +7,8 @@ public sealed class Prefs
     public bool RestorePointBeforeApply { get; set; } = true;
     /// <summary>Auto game detection (off by default).</summary>
     public bool GameWatchEnabled { get; set; }
+    /// <summary>When WinBoost last created a restore point (UTC). One per 24 h is enough; registry backups cover the rest.</summary>
+    public DateTime? LastRestorePointUtc { get; set; }
     /// <summary>Background apps the user ticked to close when a game starts (process names).</summary>
     public List<string> AutoCloseApps { get; set; } = new();
     /// <summary>User-added game exe names (without .exe).</summary>

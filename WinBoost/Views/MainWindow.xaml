@@ -51,6 +51,10 @@
                         </StackPanel>
                     </Button>
                     <ProgressRing IsActive="{x:Bind VM.IsBusy, Mode=OneWay}" Width="20" Height="20" Margin="8,0,0,0" />
+                    <StackPanel x:Name="ApplyProgressPanel" VerticalAlignment="Center" Spacing="2" Margin="4,0,0,0" Visibility="Collapsed">
+                        <TextBlock Text="{x:Bind VM.ApplyStatus, Mode=OneWay}" FontSize="12" Opacity="0.8" />
+                        <ProgressBar Width="200" Maximum="100" Value="{x:Bind VM.ApplyProgress, Mode=OneWay}" IsIndeterminate="{x:Bind VM.ApplyIndeterminate, Mode=OneWay}" />
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
                     <ToggleSwitch x:Name="RpToggle" IsOn="{x:Bind VM.RestorePointBeforeApply, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" />
@@ -84,7 +88,21 @@
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE946;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
-            <Frame x:Name="ContentFrame" />
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Spacing="6" Margin="28,12,28,0">
+                    <InfoBar x:Name="PendingBar" Severity="Warning" IsClosable="False" IsOpen="False">
+                        <InfoBar.ActionButton>
+                            <Button x:Name="PendingApplyButton" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind VM.ApplyCommand}" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+                    <InfoBar x:Name="ResultBar" IsClosable="True" IsOpen="False" />
+                </StackPanel>
+                <Frame x:Name="ContentFrame" Grid.Row="1" />
+            </Grid>
         </NavigationView>
     </Grid>
 </Window>

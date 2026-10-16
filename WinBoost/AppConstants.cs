@@ -5,7 +5,7 @@ public static class AppConstants
 {
     public const string AppName = "WinBoost";
     public const string Author = "Corpse";
-    public const string Version = "1.0.0";
+    public const string Version = "1.0.1";
     public const string LogFileName = "winboost.log";
     public const string TaskName = AppName + " Auto-Reapply";
     public const string DailyTaskName = AppName + " Auto-Reapply (Daily)";

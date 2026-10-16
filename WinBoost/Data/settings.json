@@ -902,8 +902,8 @@
     "id": "net_adapter_power",
     "nameEn": "Disable network adapter power management",
     "nameFr": "Désactiver la gestion d'énergie des cartes réseau",
-    "descriptionEn": "Prevents Windows from turning off Ethernet/Wi-Fi adapters to save power (fixes random disconnects / ping spikes).",
-    "descriptionFr": "Empêche Windows d'éteindre les cartes Ethernet/Wi-Fi pour économiser l'énergie (corrige déconnexions et pics de ping).",
+    "descriptionEn": "Prevents Windows from turning off Ethernet/Wi-Fi adapters to save power (fixes random disconnects / ping spikes). (Adapters whose driver exposes no power management are left as is.)",
+    "descriptionFr": "Empêche Windows d'éteindre les cartes Ethernet/Wi-Fi pour économiser l'énergie (corrige déconnexions et pics de ping). (Les cartes dont le pilote n'expose pas de gestion d'alimentation restent telles quelles.)",
     "category": "Network",
     "risk": "caution",
     "profiles": [
@@ -916,7 +916,7 @@
         "type": "Command",
         "applyCommand": "Get-NetAdapter -Physical | Disable-NetAdapterPowerManagement -NoRestart -EA SilentlyContinue",
         "revertCommand": "Get-NetAdapter -Physical | Enable-NetAdapterPowerManagement -NoRestart -EA SilentlyContinue",
-        "checkCommand": "$p=Get-NetAdapter -Physical | Get-NetAdapterPowerManagement -EA SilentlyContinue; ($p | ? { $_.AllowComputerToTurnOffDevice -eq 'Enabled' }).Count -eq 0 -and $p.Count -gt 0"
+        "checkCommand": "$p=@(Get-NetAdapter -Physical | Get-NetAdapterPowerManagement -EA SilentlyContinue); @($p | ? { $_.AllowComputerToTurnOffDevice -eq 'Enabled' }).Count -eq 0"
       }
     ]
   },

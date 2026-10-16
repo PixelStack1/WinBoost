@@ -9,7 +9,7 @@ namespace WinBoost.Services;
 /// Applies / reverts / detects a Setting. Each action is isolated: a failure is logged and the next action still runs.
 /// Nothing here throws to the caller.
 /// </summary>
-public sealed class TweakEngine
+public sealed partial class TweakEngine
 {
     private readonly RegistryService _reg = new();
     public RegistryService Registry => _reg;

@@ -41,6 +41,12 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 var vm = new SettingViewModel(s);
                 vm.PendingChanged += UpdateCounts;
+                var v = vm;
+                v.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(SettingViewModel.IsOn) && !_programmatic)
+                        AppLog.Info($"[toggle] {v.Id} -> {(v.IsOn ? "on" : "off")} (pending {PendingCount})");
+                };
                 Settings.Add(vm);
             }
             OnPropertyChanged(nameof(Total));
@@ -52,6 +58,12 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception ex) { AppLog.Error("Settings load failed", ex); }
         await RefreshAsync();
     }
+
+    /// <summary>True while the app itself sets IsOn (refresh/apply), so only user toggles are logged.</summary>
+    private bool _programmatic;
+
+    /// <summary>Result of the last apply/revert batch, shown in the InfoBar (null = hide).</summary>
+    public event Action<bool, string>? BatchFinished;
 
     public int Total => Settings.Count;
     [ObservableProperty] private int _appliedCount;
@@ -137,11 +149,16 @@ public sealed partial class MainViewModel : ObservableObject
             var models = Settings.Select(s => s.Model).ToList();
             var autoTask = Task.Run(AutoReapplyService.IsEnabledAsync);      // runs in parallel with detection
             var results = await Task.Run(() => _engine.DetectAllAsync(models));
-            foreach (var vm in Settings)
+            _programmatic = true;
+            try
             {
-                bool applied = results.TryGetValue(vm.Id, out var a) && a;
-                vm.IsApplied = applied; vm.IsOn = applied;
+                foreach (var vm in Settings)
+                {
+                    bool applied = results.TryGetValue(vm.Id, out var a) && a;
+                    vm.IsApplied = applied; vm.IsOn = applied;
+                }
             }
+            finally { _programmatic = false; }
             _loadingAuto = true;
             AutoReapply = await autoTask;
             _loadingAuto = false;
@@ -156,6 +173,18 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanRun))]
     public async Task ApplyAsync()
     {
+        try { await ApplyCoreAsync(); }
+        catch (Exception ex)
+        {
+            AppLog.Error("[apply] crashed", ex);
+            AddLog(Loc.F("Apply.Crashed", ex.Message));
+            BatchFinished?.Invoke(false, Loc.F("Apply.Crashed", ex.Message));
+        }
+    }
+
+    private async Task ApplyCoreAsync()
+    {
+        AppLog.Info($"[apply] clicked: pending {PendingCount}, busy {IsBusy}");
         var toApply = Settings.Where(s => s.IsOn && !s.IsApplied).ToList();
         var toRevert = Settings.Where(s => !s.IsOn && s.IsApplied).ToList();
         if (toApply.Count + toRevert.Count == 0) { AddLog(Loc.T("Log.NothingPending")); return; }
@@ -168,7 +197,7 @@ public sealed partial class MainViewModel : ObservableObject
             toApply = toApply.Except(danger).ToList();
             if (toApply.Count + toRevert.Count == 0) return;
         }
-        await RunBatchAsync(toApply, toRevert, RestorePointBeforeApply && toApply.Count > 0);
+        await RunBatchAsync(toApply, toRevert, RestorePointBeforeApply && toApply.Count > 0, fromApply: true);
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -177,7 +206,8 @@ public sealed partial class MainViewModel : ObservableObject
         var applied = Settings.Where(s => s.IsApplied).ToList();
         if (applied.Count == 0) { AddLog(Loc.T("Log.NothingPending")); return; }
         if (ConfirmAsync is not null && !await ConfirmAsync(Loc.T("Dlg.RevertTitle"), Loc.T("Dlg.RevertBody"))) return;
-        foreach (var s in applied) s.IsOn = false;
+        _programmatic = true;
+        try { foreach (var s in applied) s.IsOn = false; } finally { _programmatic = false; }
         await RunBatchAsync(new(), applied, false);
     }
 
@@ -192,58 +222,93 @@ public sealed partial class MainViewModel : ObservableObject
 
     public int ProfileCount(string profile) => Settings.Count(s => s.Model.Profiles.Contains(profile, StringComparer.OrdinalIgnoreCase));
 
-    private async Task RunBatchAsync(List<SettingViewModel> apply, List<SettingViewModel> revert, bool restorePoint)
+    /// <summary>Apply progress (0..100) for the top bar; indeterminate while the restore point is being created.</summary>
+    [ObservableProperty] private double _applyProgress;
+    [ObservableProperty] private bool _applyIndeterminate;
+    [ObservableProperty] private bool _isApplying;
+    [ObservableProperty] private string _applyStatus = "";
+
+    /// <summary>Raised once, after a user-started Apply completes, if it applied at least one reboot-required tweak.</summary>
+    public event Action<IReadOnlyList<string>>? RebootSuggested;
+
+    private async Task RunBatchAsync(List<SettingViewModel> apply, List<SettingViewModel> revert, bool restorePoint, bool fromApply = false)
     {
-        IsBusy = true;
+        IsBusy = true; IsApplying = true; ApplyProgress = 0; ApplyIndeterminate = false;
         int ok = 0, bad = 0;
+        var failed = new List<string>();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        long rpMs = 0;
+        AppLog.Info($"[apply] start: {apply.Count} to apply, {revert.Count} to revert, restore point {(restorePoint ? "on" : "off")}");
         try
         {
+            // Restore point FIRST (safety: no tweak runs before it is done or has failed). Runs off the UI thread;
+            // the UI stays responsive and shows an indeterminate bar meanwhile.
             if (restorePoint)
             {
+                ApplyIndeterminate = true;
+                ApplyStatus = Loc.T("Log.RpCreating");
                 AddLog(Loc.T("Log.RpCreating"));
+                var rpSw = System.Diagnostics.Stopwatch.StartNew();
                 var rp = await RestorePointService.CreateAsync($"{AppConstants.AppName} - before apply");
-                AddLog(rp.Message); // a failed restore point is reported but doesn't block (registry backup still happens)
+                rpMs = rpSw.ElapsedMilliseconds;
+                AppLog.Info($"[apply] restore point {(rp.Skipped ? "skipped (recent)" : rp.Ok ? "OK" : "FAILED (continuing)")} in {rpMs} ms");
+                AddLog(rp.Message); // a failed restore point is reported but never blocks: the registry backup below still protects
+                ApplyIndeterminate = false;
             }
+            ApplyStatus = Loc.F("Apply.Progress", apply.Count + revert.Count);
+            var tAfterRp = sw.ElapsedMilliseconds;
             try
             {
                 string file = await Task.Run(() => _backup.Create(apply.Concat(revert).Select(s => s.Model), apply.Count > 0 ? "apply" : "revert"));
+                AppLog.Info($"[apply] backup written: {file}");
                 AddLog(Loc.F("Log.Backup", Path.GetFileName(file)));
             }
             catch (Exception ex)
             {
-                AppLog.Error("Backup failed", ex);
+                AppLog.Error("[apply] backup failed - aborting (nothing changed)", ex);
                 AddLog(Loc.F("Log.BackupFailed", ex.Message));
-                foreach (var s in apply.Concat(revert)) s.IsOn = s.IsApplied;
+                Programmatic(() => { foreach (var s in apply.Concat(revert)) s.IsOn = s.IsApplied; });
+                BatchFinished?.Invoke(false, Loc.F("Log.BackupFailed", ex.Message));
                 return;
             }
+            ApplyProgress = 10;
 
             void Report(string m) => App.MainDispatcher?.TryEnqueue(() => AddLog(m));
+            void Progress(double f) => App.MainDispatcher?.TryEnqueue(() => ApplyProgress = 10 + 90 * f);
 
-            foreach (var s in revert)
+            var items = revert.Select(s => new TweakEngine.BatchItem(s.Model, false))
+                .Concat(apply.Select(s => new TweakEngine.BatchItem(s.Model, true))).ToList();
+            var results = await Task.Run(() => _engine.RunBatchAsync(items, Report, Progress));
+            var byId = Settings.ToDictionary(s => s.Id);
+            var rebootNames = new List<string>();
+            foreach (var r in results)
             {
-                AddLog(Loc.F("Log.Reverting", s.Name));
-                bool r = await Task.Run(() => _engine.RevertAsync(s.Model, Report));
-                if (r) ok++; else bad++;
-                s.IsApplied = await Task.Run(() => _engine.IsAppliedAsync(s.Model));
-                s.IsOn = s.IsApplied;
-            }
-            foreach (var s in apply)
-            {
-                AddLog(Loc.F("Log.Applying", s.Name));
-                bool r = await Task.Run(() => _engine.ApplyAsync(s.Model, Report));
-                if (r) ok++; else bad++;
-                s.IsApplied = await Task.Run(() => _engine.IsAppliedAsync(s.Model));
-                s.IsOn = s.IsApplied;
-                if (s.Model.RequiresReboot) RebootNeeded = true;
+                if (!byId.TryGetValue(r.Id, out var s)) continue;
+                Programmatic(() => { s.IsApplied = r.AppliedNow; s.IsOn = r.AppliedNow; });
+                if (r.Ok) ok++; else { bad++; failed.Add(s.Name); AddLog($"  ✖ {s.Name}: {r.Error}"); }
+                bool wasApply = apply.Contains(s);
+                if (wasApply && r.AppliedNow && s.Model.RequiresReboot) { RebootNeeded = true; rebootNames.Add(s.Name); }
             }
             if (AutoReapply) SaveAutoProfile();
             UpdateCounts();
             AddLog(Loc.F("Log.Done", ok, bad));
             if (RebootNeeded) AddLog(Loc.T("Dash.Reboot"));
+            AppLog.Info($"[apply] end: {ok} OK, {bad} failed - total {sw.ElapsedMilliseconds} ms (restore point {rpMs} ms, tweaks {sw.ElapsedMilliseconds - tAfterRp} ms) - applied now {AppliedCount}/{Total}");
+            if (bad > 0)
+                BatchFinished?.Invoke(false, Loc.F("Apply.SomeFailed", bad, ok, string.Join(", ", failed.Take(5)) + (failed.Count > 5 ? "…" : "")));
+            else
+                BatchFinished?.Invoke(true, Loc.F("Log.Done", ok, bad));
+            if (fromApply && rebootNames.Count > 0) RebootSuggested?.Invoke(rebootNames);
         }
-        catch (Exception ex) { AppLog.Error("Batch failed", ex); AddLog(ex.Message); }
-        finally { IsBusy = false; }
+        catch (Exception ex)
+        {
+            AppLog.Error("[apply] batch failed", ex); AddLog(ex.Message);
+            BatchFinished?.Invoke(false, Loc.F("Apply.Crashed", ex.Message));
+        }
+        finally { IsBusy = false; IsApplying = false; ApplyIndeterminate = false; ApplyStatus = ""; }
     }
+
+    private void Programmatic(Action a) { _programmatic = true; try { a(); } finally { _programmatic = false; } }
 
     private void SaveAutoProfile() =>
         AutoReapplyService.SaveProfile(Settings.Select(s => new ProfileEntry { Id = s.Id, Applied = s.IsApplied }));

@@ -52,7 +52,7 @@ public static partial class PowerService
     /// <summary>Returns the current AC value index of a power setting on the active scheme, or null if the setting doesn't exist.</summary>
     public static async Task<uint?> GetAcValueAsync(string sub, string setting)
     {
-        var r = await ProcessRunner.RunAsync("powercfg.exe", $"/q SCHEME_CURRENT {sub} {setting}", 20_000).ConfigureAwait(false);
+        var r = await ProcessRunner.RunAsync("powercfg.exe", $"/qh SCHEME_CURRENT {sub} {setting}", 20_000).ConfigureAwait(false);
         if (r.ExitCode != 0) return null;
         var hex = HexRx().Matches(r.Output);
         // The last two 0x values are "Current AC" then "Current DC" (the DC line is absent on some desktops).
@@ -74,7 +74,7 @@ public static partial class PowerService
         var result = new Dictionary<string, PowerRead>(StringComparer.OrdinalIgnoreCase);
         var list = wanted.Distinct().ToList();
         if (list.Count == 0) return result;
-        var dump = await ProcessRunner.RunAsync("powercfg.exe", "/q SCHEME_CURRENT", 30_000).ConfigureAwait(false);
+        var dump = await ProcessRunner.RunAsync("powercfg.exe", "/qh SCHEME_CURRENT", 30_000).ConfigureAwait(false);
         var missing = new List<(string Sub, string Setting)>();
         if (dump.ExitCode == 0)
         {
@@ -97,7 +97,7 @@ public static partial class PowerService
 
     public static async Task<PowerRead> ReadOneAsync(string sub, string setting)
     {
-        var r = await ProcessRunner.RunAsync("powercfg.exe", $"/q SCHEME_CURRENT {sub} {setting}", 20_000).ConfigureAwait(false);
+        var r = await ProcessRunner.RunAsync("powercfg.exe", $"/qh SCHEME_CURRENT {sub} {setting}", 20_000).ConfigureAwait(false);
         if (r.ExitCode is -1 or -2) return new PowerRead(false, null);  // timeout / could not start: unknown
         if (r.ExitCode != 0) return new PowerRead(true, null);          // setting not present on this PC
         var hex = HexRx().Matches(r.Output);

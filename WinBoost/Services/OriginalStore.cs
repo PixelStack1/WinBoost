@@ -11,6 +11,12 @@ public static class OriginalStore
 {
     private static readonly object Gate = new();
     private static Dictionary<string, BackupEntry>? _map;
+    private static int _batch;
+    private static bool _dirty;
+
+    /// <summary>Defers writes to originals.json until the matching EndBatch (one file write per apply instead of one per value).</summary>
+    public static void BeginBatch() { lock (Gate) _batch++; }
+    public static void EndBatch() { lock (Gate) { if (--_batch <= 0) { _batch = 0; if (_dirty) Save(); } } }
     private static string FilePath => Path.Combine(AppConstants.DataFolder, "originals.json");
 
     private static Dictionary<string, BackupEntry> Map
@@ -45,6 +51,8 @@ public static class OriginalStore
 
     private static void Save()
     {
+        if (_batch > 0) { _dirty = true; return; }
+        _dirty = false;
         try { AppLog.WriteAllTextAtomic(FilePath, JsonSerializer.Serialize(Map, SettingsRepository.Json)); }
         catch (Exception ex) { AppLog.Warn("Could not save originals.json: " + ex.Message); }
     }

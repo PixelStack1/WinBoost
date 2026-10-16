@@ -2,7 +2,7 @@
 
 **Tire le maximum de ton PC pour le jeu sur Windows 11.** / **Squeeze every frame out of Windows 11 for gaming.**
 
-*by Corpse — v1.0.0*
+*by Corpse — v1.0.1*
 
 WinBoost est une petite appli gratuite qui regroupe au même endroit tous les réglages Windows qui comptent vraiment pour le jeu : mode d'alimentation, mode Jeu, planification GPU, latence réseau, souris, applis en arrière-plan… Tu coches, tu cliques sur **Appliquer**, c'est fait. Et si un réglage ne te plaît pas, tu reviens en arrière en un clic.
 
