@@ -1,6 +1,6 @@
 ; Inno Setup script - WinBoost by Corpse
 #define AppName "WinBoost"
-#define AppVersion "1.0.1"
+#define AppVersion "1.0.2"
 #define AppExe "WinBoost.exe"
 ; Publish folder (build.ps1 output). Override: ISCC /DPublishDir="C:\path\to\app" WinBoost.iss
 #ifndef PublishDir

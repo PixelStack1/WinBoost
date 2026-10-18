@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Unit tests
+        run: dotnet test WinBoost.Tests/WinBoost.Tests.csproj -c Release --nologo
+
+      - name: Publish self-contained win-x64
+        shell: pwsh
+        run: |
+          dotnet publish WinBoost/WinBoost.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:WindowsAppSDKSelfContained=true -p:WindowsPackageType=None -o publish
+          if ($LASTEXITCODE -ne 0) { throw "publish failed ($LASTEXITCODE)" }
+          if (-not (Test-Path publish/WinBoost.exe)) { throw "WinBoost.exe missing from publish output" }
+          if (-not (Test-Path publish/coreclr.dll)) { throw ".NET runtime is not bundled (coreclr.dll missing)" }
+          $winui = Get-ChildItem publish -Recurse -Filter Microsoft.UI.Xaml.dll -ErrorAction SilentlyContinue
+          if (-not $winui) { throw "Windows App SDK / WinUI runtime is not bundled (Microsoft.UI.Xaml.dll missing)" }
+          Write-Host "Publish OK: $((Get-ChildItem publish -Recurse -File).Count) files"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          if ($LASTEXITCODE -eq 3010) { exit 0 }
+          if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed ($LASTEXITCODE)" }
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc" }
+          & $iscc /DPublishDir=publish /DOutDir=setup .\WinBoost.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }
+          $setup = Get-Item setup/WinBoostSetup.exe
+          if ($setup.Length -le 0) { throw "WinBoostSetup.exe is empty" }
+          Write-Host "Installer $($setup.Name) $($setup.Length) bytes"
+
+      - name: Create GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $notes = ".github/release-notes/$tag.md"
+          if (-not (Test-Path $notes)) { throw "Missing release notes $notes" }
+          $hash = (Get-FileHash setup/WinBoostSetup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path setup/WinBoostSetup.exe.sha256 -Value "$hash  WinBoostSetup.exe" -Encoding ascii
+          $title = "WinBoost " + $tag.TrimStart("v")
+          gh release create $tag setup/WinBoostSetup.exe setup/WinBoostSetup.exe.sha256 --title $title --notes-file $notes --latest
