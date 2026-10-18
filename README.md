@@ -2,7 +2,7 @@
 
 **Tire le maximum de ton PC pour le jeu sur Windows 11.** / **Squeeze every frame out of Windows 11 for gaming.**
 
-*by Corpse — v1.0.1*
+*by Corpse — v1.0.2*
 
 ![WinBoost](docs/screenshot.png)
 
