@@ -1480,7 +1480,6 @@
     "category": "Storage",
     "risk": "safe",
     "profiles": [
-      "competitive",
       "extreme"
     ],
     "requiresReboot": false,

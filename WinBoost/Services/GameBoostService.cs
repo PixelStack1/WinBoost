@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using WinBoost.Logic;
 
 namespace WinBoost.Services;
 
@@ -20,6 +21,11 @@ public static class GameBoostService
     };
 
     public static bool IsProtected(string name) => Protected.Contains(name);
+
+    /// <summary>True only for the built-in background list. A name that exists only in prefs.json is refused.</summary>
+    public static bool MayClose(string? name) => ClosePolicy.MayClose(name, CommonBackground, Protected);
+
+    public static List<string> FilterCloseList(IEnumerable<string>? names) => ClosePolicy.Filter(names, CommonBackground, Protected);
     private static readonly HashSet<string> Protected = new(StringComparer.OrdinalIgnoreCase)
     {
         "System", "Idle", "csrss", "wininit", "winlogon", "services", "lsass", "smss", "svchost", "dwm", "explorer",
@@ -73,10 +79,15 @@ public static class GameBoostService
         catch (Exception ex) { AppLog.Warn($"SetPriority {pid} failed: {ex.Message}"); return ex.Message; }
     }
 
-    /// <summary>Closes all processes with the given name: graceful CloseMainWindow first, then Kill. Returns closed count.</summary>
+    /// <summary>Closes all processes with the given name: graceful CloseMainWindow first, then Kill of that process only (not its children). Returns closed count.</summary>
     public static int CloseByName(string name)
     {
-        if (Protected.Contains(name)) return 0;
+        if (!MayClose(name))
+        {
+            if (!string.IsNullOrWhiteSpace(name))
+                AppLog.Warn($"Refusing to close '{name}': not on the built-in allow list (prefs.json alone is not enough).");
+            return 0;
+        }
         int n = 0;
         Process[] procs;
         try { procs = Process.GetProcessesByName(name); } catch { return 0; }
@@ -84,7 +95,7 @@ public static class GameBoostService
         {
             try
             {
-                if (!(p.CloseMainWindow() && p.WaitForExit(2000))) p.Kill(true);
+                if (!(p.CloseMainWindow() && p.WaitForExit(2000))) p.Kill(entireProcessTree: false);
                 n++;
             }
             catch (Exception ex) { AppLog.Warn($"Close {name} ({p.Id}) failed: {ex.Message}"); }

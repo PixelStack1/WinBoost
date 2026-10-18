@@ -48,7 +48,7 @@ public sealed partial class BoostPage : Page
             AppsList.ItemsSource = apps;
             _loading = true;
             // Show running candidates plus ticked apps that aren't running right now (so the auto-close list stays visible).
-            var ticked = PrefsStore.Current.AutoCloseApps;
+            var ticked = GameBoostService.FilterCloseList(PrefsStore.Current.AutoCloseApps);
             var all = bg.Concat(ticked.Where(t => !bg.Any(b => b.ProcessName.Equals(t, StringComparison.OrdinalIgnoreCase)))
                                       .Select(t => new RunningApp(0, t, "—", 0))).ToList();
             BgList.ItemsSource = all;
@@ -64,8 +64,8 @@ public sealed partial class BoostPage : Page
         if (_loading) return;
         try
         {
-            PrefsStore.Current.AutoCloseApps = BgList.SelectedItems.OfType<RunningApp>().Select(a => a.ProcessName)
-                .Where(n => !GameBoostService.IsProtected(n)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            PrefsStore.Current.AutoCloseApps = GameBoostService.FilterCloseList(
+                BgList.SelectedItems.OfType<RunningApp>().Select(a => a.ProcessName));
             PrefsStore.Save();
         }
         catch (Exception ex) { AppLog.Warn("Save auto-close list failed: " + ex.Message); }

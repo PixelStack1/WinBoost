@@ -1,4 +1,5 @@
 using System.Text.Json;
+using WinBoost.Logic;
 using WinBoost.Models;
 
 namespace WinBoost.Services;
@@ -13,6 +14,8 @@ public static class OriginalStore
     private static Dictionary<string, BackupEntry>? _map;
     private static int _batch;
     private static bool _dirty;
+    /// <summary>Set when a corrupt originals.json could not be renamed. Further saves are refused so the file is not overwritten.</summary>
+    private static bool _saveBlocked;
 
     /// <summary>Defers writes to originals.json until the matching EndBatch (one file write per apply instead of one per value).</summary>
     public static void BeginBatch() { lock (Gate) _batch++; }
@@ -26,11 +29,17 @@ public static class OriginalStore
             if (_map is not null) return _map;
             try
             {
-                if (File.Exists(FilePath))
-                    _map = JsonSerializer.Deserialize<Dictionary<string, BackupEntry>>(File.ReadAllText(FilePath), SettingsRepository.Json);
+                _map = OriginalFile.LoadOrQuarantine(FilePath, SettingsRepository.Json, out var quarantined);
+                if (quarantined is not null)
+                    AppLog.Warn("originals.json was unreadable and has been renamed to " + quarantined + " (it was not overwritten).");
             }
-            catch (Exception ex) { AppLog.Warn("originals.json unreadable, starting fresh: " + ex.Message); }
-            return _map ??= new();
+            catch (Exception ex)
+            {
+                _saveBlocked = true;
+                _map = new(StringComparer.OrdinalIgnoreCase);
+                AppLog.Warn("originals.json unreadable and could not be renamed; saves are blocked so the file is not overwritten: " + ex.Message);
+            }
+            return _map ??= new(StringComparer.OrdinalIgnoreCase);
         }
     }
 
@@ -47,11 +56,22 @@ public static class OriginalStore
 
     public static BackupEntry? Get(string key) { lock (Gate) return Map.TryGetValue(key, out var e) ? e : null; }
 
+    public static List<(string Key, BackupEntry Entry)> Snapshot()
+    {
+        lock (Gate)
+        {
+            var copy = new List<(string Key, BackupEntry Entry)>(Map.Count);
+            foreach (var kv in Map) copy.Add((kv.Key, kv.Value));
+            return copy;
+        }
+    }
+
     public static void Forget(string key) { lock (Gate) { if (Map.Remove(key)) Save(); } }
 
     private static void Save()
     {
         if (_batch > 0) { _dirty = true; return; }
+        if (_saveBlocked) { AppLog.Warn("originals.json save skipped (corrupt file could not be quarantined)."); _dirty = false; return; }
         _dirty = false;
         try { AppLog.WriteAllTextAtomic(FilePath, JsonSerializer.Serialize(Map, SettingsRepository.Json)); }
         catch (Exception ex) { AppLog.Warn("Could not save originals.json: " + ex.Message); }

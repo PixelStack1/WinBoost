@@ -174,7 +174,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>Diagnostic (--test-batch=apply|revert:id1,id2): really applies or reverts the listed tweaks through the
-    /// normal batch engine (no restore point) and logs each result plus a full re-detection afterwards.</summary>
+    /// normal batch engine and logs each result plus a full re-detection afterwards. Aborts when the restore point fails.</summary>
     private async Task TestBatchAsync(string spec)
     {
         try
@@ -185,6 +185,8 @@ public sealed partial class MainWindow : Window
             var ids = parts[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var items = VM.Settings.Where(s => ids.Contains(s.Id)).Select(s => new TweakEngine.BatchItem(s.Model, apply)).ToList();
             AppLog.Info($"[test] {(apply ? "apply" : "revert")} {items.Count} tweaks");
+            var rp = await RestorePointService.CreateAsync($"{AppConstants.AppName} - test batch");
+            if (!rp.Ok) { AppLog.Warn("[test] aborted, nothing changed: " + rp.Message); return; }
             var engine = new TweakEngine();
             var res = await Task.Run(() => engine.RunBatchAsync(items, m => AppLog.Info("[test] " + m)));
             AppLog.Info($"[test] result: {res.Count(r => r.Ok)} OK, {res.Count(r => !r.Ok)} failed; applied now: {string.Join(",", res.Where(r => r.AppliedNow).Select(r => r.Id))}");

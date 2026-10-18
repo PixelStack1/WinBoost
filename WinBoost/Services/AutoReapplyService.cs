@@ -57,27 +57,45 @@ public static class AutoReapplyService
         catch (Exception ex) { AppLog.Warn("Could not save auto-reapply profile: " + ex.Message); }
     }
 
-    /// <summary>Headless mode: re-apply every setting marked applied in the saved profile. Each setting is isolated.</summary>
-    public static async Task ReapplyAsync()
+    /// <summary>Headless mode: re-apply every setting marked applied in the saved profile. Each setting is isolated.
+    /// Returns false when a restore point was required and could not be created, or when a re-apply failed.</summary>
+    public static async Task<bool> ReapplyAsync()
     {
         AppLog.Info("Headless --reapply started.");
-        if (!File.Exists(ProfilePath)) { AppLog.Info("No auto-reapply profile; nothing to do."); return; }
+        if (!File.Exists(ProfilePath)) { AppLog.Info("No auto-reapply profile; nothing to do."); return true; }
         List<ProfileEntry> profile;
         try { profile = JsonSerializer.Deserialize<List<ProfileEntry>>(File.ReadAllText(ProfilePath), SettingsRepository.Json) ?? new(); }
-        catch (Exception ex) { AppLog.Error("Auto-reapply profile is corrupt; skipping.", ex); return; }
+        catch (Exception ex) { AppLog.Error("Auto-reapply profile is corrupt; skipping.", ex); return false; }
         var wanted = profile.Where(p => p is not null && p.Applied).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var engine = new TweakEngine();
-        int done = 0, failed = 0;
+        var pending = new List<Setting>();
         foreach (Setting s in SettingsRepository.Load().Where(s => wanted.Contains(s.Id)))
         {
             try
             {
-                if (await engine.IsAppliedAsync(s).ConfigureAwait(false)) continue;
+                if (!await engine.IsAppliedAsync(s).ConfigureAwait(false)) pending.Add(s);
+            }
+            catch (Exception ex) { AppLog.Error($"reapply detect {s.Id} failed", ex); pending.Add(s); }
+        }
+        if (pending.Count == 0) { AppLog.Info("Headless --reapply: nothing drifted."); return true; }
+        var rp = await RestorePointService.CreateAsync($"{AppConstants.AppName} - before reapply").ConfigureAwait(false);
+        if (!rp.Ok)
+        {
+            AppLog.Warn("[reapply] restore point failed — nothing was re-applied. " + rp.Message);
+            return false;
+        }
+        AppLog.Info("[reapply] restore point " + (rp.Skipped ? "skipped (recent)" : "OK"));
+        int done = 0, failed = 0;
+        foreach (Setting s in pending)
+        {
+            try
+            {
                 bool ok = await engine.ApplyAsync(s, m => AppLog.Info("reapply: " + m.Trim())).ConfigureAwait(false);
                 if (ok) done++; else failed++;
             }
             catch (Exception ex) { failed++; AppLog.Error($"reapply {s.Id} failed", ex); }
         }
         AppLog.Info($"Headless --reapply finished: {done} re-applied, {failed} with errors.");
+        return failed == 0;
     }
 }

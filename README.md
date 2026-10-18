@@ -31,7 +31,7 @@ WinBoost corrige ça proprement :
 
 - **56 réglages** dans 10 catégories, chacun avec un badge de risque : **SÛR**, **PRUDENCE**, **DANGER**.
 - **3 profils** : Recommandé (sûr uniquement), Compétitif, Extrême — et un bouton **« Booster mon PC »** en un clic.
-- **Sauvegarde avant chaque modification** + **point de restauration** optionnel. Tout est réversible : « Tout annuler » remet *tes* valeurs d'origine.
+- **Sauvegarde avant chaque modification** + **point de restauration obligatoire** (le lot est annulé si le point ne peut pas être créé). « Tout annuler » remet la valeur enregistrée avant le changement.
 - **Game Boost** + **détection auto des jeux** : quand un jeu se lance, WinBoost peut le passer en priorité haute et fermer les applis que *tu* as choisies — puis tout remettre comme avant quand tu quittes.
 - **Tableau de bord en direct** : jauges CPU, GPU, RAM et température GPU (cartes NVIDIA).
 - **Applis au démarrage** : vois ce qui se lance avec Windows et active/désactive en un clic (réversible).
@@ -67,8 +67,8 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 Tout est dans `%LocalAppData%\WinBoost\` : `winboost.log` (journal), `Backups\` (sauvegardes du registre), `originals.json` (valeurs d'origine pour l'annulation), `autoprofile.json` (réapplication auto).
 
-Les réglages sont décrits dans `WinBoost/Data/settings.json` — tu peux en ajouter sans toucher au code (ou poser un `settings.json` dans `%LocalAppData%\WinBoost\` pour remplacer la liste intégrée).
+Les réglages sont décrits dans `WinBoost/Data/settings.json`. Un `settings.json` dans `%LocalAppData%\WinBoost\` peut seulement ajouter des réglages sans action Command ; il ne remplace pas la liste intégrée et ne peut pas lancer de commande.
 
 ---
 
-*WinBoost — by Corpse. Utilise-le à tes risques ; crée un point de restauration avant de tester les réglages « Prudence » et « Danger ».*
+*WinBoost — by Corpse. Utilise-le à tes risques. L'application crée un point de restauration avant chaque lot et n'applique rien si ce point ne peut pas être créé.*

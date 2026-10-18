@@ -9,7 +9,7 @@
 ## Premier lancement
 1. Clique sur **Actualiser** : WinBoost lit l'état actuel de ton PC.
 2. Va dans **Profils** et choisis **Recommandé** (aucun risque) ou **Compétitif**, ou utilise **Booster mon PC** sur le tableau de bord.
-3. Laisse **Point de restauration avant application** activé.
+3. Un point de restauration est créé avant chaque modification. L'interrupteur reste activé.
 4. Clique sur **Appliquer**. Certains réglages (HAGS, timer…) demandent un **redémarrage**.
 
 ## Revenir en arrière

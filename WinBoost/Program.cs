@@ -18,10 +18,26 @@ public static class Program
     /// <summary>Named mutex held for the process lifetime; the installer's AppMutex uses it to detect a running WinBoost.</summary>
     private static Mutex? _instanceMutex;
 
+    /// <summary>Owns the mutex when this process is the only instance. A failure to create it is logged and startup continues.</summary>
+    private static bool AcquireInstanceMutex()
+    {
+        try
+        {
+            _instanceMutex = new Mutex(true, @"Global\WinBoost_AppMutex", out bool createdNew);
+            if (createdNew) return true;
+            AppLog.Info("Another WinBoost instance holds the mutex; this process exits.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("Single-instance mutex could not be created: " + ex.Message);
+            return true;
+        }
+    }
+
     [STAThread]
     private static int Main(string[] args)
     {
-        try { _instanceMutex = new Mutex(false, @"Global\WinBoost_AppMutex"); } catch { }
         _ = SinceStartMs; // pin the process start time
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             AppLog.Error($"Unhandled background exception (terminating={e.IsTerminating})", e.ExceptionObject as Exception);
@@ -29,11 +45,16 @@ public static class Program
 
         AppLog.Info($"{AppConstants.AppName} {AppConstants.Version} starting (args: {string.Join(' ', args)}) on {Environment.OSVersion}");
 
+        if (!AcquireInstanceMutex()) return 2;
+
         if (args.Any(a => a.Equals("--reapply", StringComparison.OrdinalIgnoreCase)))
         {
-            try { AutoReapplyService.ReapplyAsync().GetAwaiter().GetResult(); }
+            try
+            {
+                bool ok = AutoReapplyService.ReapplyAsync().GetAwaiter().GetResult();
+                return ok ? 0 : 1;
+            }
             catch (Exception ex) { AppLog.Error("Headless reapply failed", ex); return 1; }
-            return 0;
         }
 
         try

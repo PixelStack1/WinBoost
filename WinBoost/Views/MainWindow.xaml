@@ -57,7 +57,7 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
-                    <ToggleSwitch x:Name="RpToggle" IsOn="{x:Bind VM.RestorePointBeforeApply, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" />
+                    <ToggleSwitch x:Name="RpToggle" IsEnabled="False" IsOn="{x:Bind VM.RestorePointBeforeApply, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" />
                     <ToggleSwitch x:Name="AutoToggle" IsOn="{x:Bind VM.AutoReapply, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0"
                                   IsEnabled="{x:Bind VM.IsIdle, Mode=OneWay}" />
                     <Button x:Name="LangButton" Click="OnLanguageClick" MinWidth="44" />
