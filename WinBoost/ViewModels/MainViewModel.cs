@@ -3,6 +3,7 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WinBoost.Localization;
+using WinBoost.Logic;
 using WinBoost.Models;
 using WinBoost.Services;
 
@@ -27,7 +28,12 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         _backup = new BackupService(_engine.Registry);
-        _restorePointBeforeApply = PrefsStore.Current.RestorePointBeforeApply;
+        _restorePointBeforeApply = true;
+        if (!PrefsStore.Current.RestorePointBeforeApply)
+        {
+            PrefsStore.Current.RestorePointBeforeApply = true;
+            PrefsStore.Save();
+        }
     }
 
     /// <summary>Loads settings.json off the UI thread, then reads system state. The window is already visible.</summary>
@@ -85,7 +91,8 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _restorePointBeforeApply = true;
     partial void OnRestorePointBeforeApplyChanged(bool value)
     {
-        PrefsStore.Current.RestorePointBeforeApply = value;
+        if (!value) { RestorePointBeforeApply = true; return; }
+        PrefsStore.Current.RestorePointBeforeApply = true;
         PrefsStore.Save();
     }
 
@@ -202,7 +209,7 @@ public sealed partial class MainViewModel : ObservableObject
             toApply = toApply.Except(danger).ToList();
             if (toApply.Count + toRevert.Count == 0) return;
         }
-        await RunBatchAsync(toApply, toRevert, RestorePointBeforeApply && toApply.Count > 0, fromApply: true);
+        await RunBatchAsync(toApply, toRevert, fromApply: true);
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -213,14 +220,20 @@ public sealed partial class MainViewModel : ObservableObject
         if (ConfirmAsync is not null && !await ConfirmAsync(Loc.T("Dlg.RevertTitle"), Loc.T("Dlg.RevertBody"))) return;
         _programmatic = true;
         try { foreach (var s in applied) s.IsOn = false; } finally { _programmatic = false; }
-        await RunBatchAsync(new(), applied, false);
+        await RunBatchAsync(new(), applied);
     }
 
-    /// <summary>Selects exactly the tweaks of a profile (others off). Optionally applies immediately.</summary>
+    /// <summary>Turns on the tweaks of a profile and turns the others off. Native rows stay as they are. Optionally applies immediately.</summary>
     public async Task SelectProfileAsync(string profile, bool applyNow)
     {
-        foreach (var s in Settings)
-            if (!s.IsNative && s.Risk != Risk.Danger && s.Model.Profiles.Contains(profile, StringComparer.OrdinalIgnoreCase)) s.IsOn = true;
+        Programmatic(() =>
+        {
+            foreach (var s in Settings)
+            {
+                bool? desired = ProfileSelection.Desired(s.IsNative, s.Risk, s.Model.Profiles, profile);
+                if (desired is bool on) s.IsOn = on;
+            }
+        });
         AddLog(Loc.F("Log.Profile", Loc.T("Prof." + profile)));
         if (applyNow) await ApplyAsync();
     }
@@ -236,30 +249,34 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Raised once, after a user-started Apply completes, if it applied at least one reboot-required tweak.</summary>
     public event Action<IReadOnlyList<string>>? RebootSuggested;
 
-    private async Task RunBatchAsync(List<SettingViewModel> apply, List<SettingViewModel> revert, bool restorePoint, bool fromApply = false)
+    private async Task RunBatchAsync(List<SettingViewModel> apply, List<SettingViewModel> revert, bool fromApply = false)
     {
         IsBusy = true; IsApplying = true; ApplyProgress = 0; ApplyIndeterminate = false;
         int ok = 0, bad = 0;
         var failed = new List<string>();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         long rpMs = 0;
-        AppLog.Info($"[apply] start: {apply.Count} to apply, {revert.Count} to revert, restore point {(restorePoint ? "on" : "off")}");
+        AppLog.Info($"[apply] start: {apply.Count} to apply, {revert.Count} to revert, restore point required");
         try
         {
-            // Restore point FIRST (safety: no tweak runs before it is done or has failed). Runs off the UI thread;
-            // the UI stays responsive and shows an indeterminate bar meanwhile.
-            if (restorePoint)
+            // Restore point FIRST. A failure aborts before the backup file and before any tweak.
+            ApplyIndeterminate = true;
+            ApplyStatus = Loc.T("Log.RpCreating");
+            AddLog(Loc.T("Log.RpCreating"));
+            var rpSw = System.Diagnostics.Stopwatch.StartNew();
+            var rp = await RestorePointService.CreateAsync($"{AppConstants.AppName} - before changes");
+            rpMs = rpSw.ElapsedMilliseconds;
+            AddLog(rp.Message);
+            if (!rp.Ok)
             {
-                ApplyIndeterminate = true;
-                ApplyStatus = Loc.T("Log.RpCreating");
-                AddLog(Loc.T("Log.RpCreating"));
-                var rpSw = System.Diagnostics.Stopwatch.StartNew();
-                var rp = await RestorePointService.CreateAsync($"{AppConstants.AppName} - before apply");
-                rpMs = rpSw.ElapsedMilliseconds;
-                AppLog.Info($"[apply] restore point {(rp.Skipped ? "skipped (recent)" : rp.Ok ? "OK" : "FAILED (continuing)")} in {rpMs} ms");
-                AddLog(rp.Message); // a failed restore point is reported but never blocks: the registry backup below still protects
-                ApplyIndeterminate = false;
+                AppLog.Warn($"[apply] restore point failed in {rpMs} ms — batch aborted, nothing changed");
+                AddLog(Loc.T("Log.RpAbort"));
+                Programmatic(() => { foreach (var s in apply.Concat(revert)) s.IsOn = s.IsApplied; });
+                BatchFinished?.Invoke(false, Loc.T("Log.RpAbort"));
+                return;
             }
+            AppLog.Info($"[apply] restore point {(rp.Skipped ? "skipped (recent)" : "OK")} in {rpMs} ms");
+            ApplyIndeterminate = false;
             ApplyStatus = Loc.F("Apply.Progress", apply.Count + revert.Count);
             var tAfterRp = sw.ElapsedMilliseconds;
             try

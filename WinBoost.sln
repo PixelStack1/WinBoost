@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WinBoost", "WinBoost\WinBoost.csproj", "{6B1E3C2A-4D5F-4A7B-9C8D-0E1F2A3B4C5D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WinBoost.Tests", "WinBoost.Tests\WinBoost.Tests.csproj", "{C4E8A1B2-7D3F-4E91-9A6B-1F2E3D4C5B6A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -15,6 +17,10 @@ Global
 		{6B1E3C2A-4D5F-4A7B-9C8D-0E1F2A3B4C5D}.Debug|x64.Build.0 = Debug|x64
 		{6B1E3C2A-4D5F-4A7B-9C8D-0E1F2A3B4C5D}.Release|x64.ActiveCfg = Release|x64
 		{6B1E3C2A-4D5F-4A7B-9C8D-0E1F2A3B4C5D}.Release|x64.Build.0 = Release|x64
+		{C4E8A1B2-7D3F-4E91-9A6B-1F2E3D4C5B6A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C4E8A1B2-7D3F-4E91-9A6B-1F2E3D4C5B6A}.Debug|x64.Build.0 = Debug|Any CPU
+		{C4E8A1B2-7D3F-4E91-9A6B-1F2E3D4C5B6A}.Release|x64.ActiveCfg = Release|Any CPU
+		{C4E8A1B2-7D3F-4E91-9A6B-1F2E3D4C5B6A}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

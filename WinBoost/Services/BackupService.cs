@@ -1,4 +1,5 @@
 using System.Text.Json;
+using WinBoost.Logic;
 using WinBoost.Models;
 
 namespace WinBoost.Services;
@@ -58,4 +59,28 @@ public sealed class BackupService
         }
         return failed;
     }
+
+    /// <summary>Backup files oldest-first (filename is backup-yyyyMMdd-HHmmss-fff).</summary>
+    public static List<BackupFile> LoadChronological()
+    {
+        var list = new List<(string Name, BackupFile File)>();
+        try
+        {
+            if (!Directory.Exists(BackupFolder)) return new();
+            foreach (var path in Directory.GetFiles(BackupFolder, "backup-*.json"))
+            {
+                try
+                {
+                    var f = JsonSerializer.Deserialize<BackupFile>(File.ReadAllText(path), SettingsRepository.Json);
+                    if (f?.Registry is not null) list.Add((Path.GetFileName(path), f));
+                }
+                catch (Exception ex) { AppLog.Warn("Skipping unreadable backup " + path + ": " + ex.Message); }
+            }
+        }
+        catch (Exception ex) { AppLog.Warn("Cannot list backups: " + ex.Message); }
+        return list.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).Select(x => x.File).ToList();
+    }
+
+    public static BackupEntry? Oldest(IEnumerable<BackupFile>? files, string hive, string path, string name) =>
+        BackupCatalog.Oldest(files, hive, path, name);
 }

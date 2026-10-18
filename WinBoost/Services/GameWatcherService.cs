@@ -106,11 +106,10 @@ public static class GameWatcherService
             parts.Add(err is null ? "priority High" : "priority: " + err);
         }
         catch (Exception ex) { AppLog.Warn("Auto priority failed: " + ex.Message); }
-        foreach (var app in PrefsStore.Current.AutoCloseApps.ToList())
+        foreach (var app in GameBoostService.FilterCloseList(PrefsStore.Current.AutoCloseApps))
         {
             try
             {
-                if (GameBoostService.IsProtected(app)) continue;
                 int n = GameBoostService.CloseByName(app);
                 if (n > 0) parts.Add($"closed {app}");
             }

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using WinBoost.Localization;
+using WinBoost.Logic;
 using WinBoost.Models;
 
 namespace WinBoost.Services;
@@ -51,6 +52,7 @@ public sealed partial class TweakEngine
             var svcOps = new List<(ItemState St, string Svc, bool Stop)>();
             foreach (var st in states)
             {
+                if (!st.Item.Apply) st.Untouched = true;
                 var acts = st.Item.Apply ? st.Item.Setting.Actions : Enumerable.Reverse(st.Item.Setting.Actions).ToList();
                 foreach (var a in acts)
                 {
@@ -61,23 +63,25 @@ public sealed partial class TweakEngine
                             case ActionType.Registry:
                             case ActionType.RegistryPerInterface:
                                 if (DryRun) { foreach (var t in RegistryTargets(new Setting { Actions = { a } }, _reg)) _reg.Snapshot(t.Hive, t.Path, t.Name); }
-                                else if (st.Item.Apply) ApplyActionRegistry(a); else RevertActionRegistry(a);
+                                else if (st.Item.Apply) ApplyActionRegistry(a);
+                                else if (RevertActionRegistry(a)) st.Untouched = false;
                                 break;
                             case ActionType.Service:
                             {
                                 string p = $@"{ServicesPath}\{a.Target}";
-                                if (!_reg.KeyExists("HKLM", p)) { AppLog.Info($"Service {a.Target} not present, skipped"); if (!st.Item.Apply) st.Untouched = true; break; }
+                                if (!_reg.KeyExists("HKLM", p)) { AppLog.Info($"Service {a.Target} not present, skipped"); break; }
                                 if (DryRun) { _reg.Snapshot("HKLM", p, "Start"); svcOps.Add((st, a.Target!, true)); }
                                 else if (st.Item.Apply)
                                 {
                                     WriteRemembering("HKLM", p, "Start", "DWord", a.EnabledValue);
                                     if (a.EnabledValue == "4") svcOps.Add((st, a.Target!, true));
                                 }
-                                else
+                                else if (RestoreRecorded("HKLM", p, "Start"))
                                 {
-                                    RestoreRemembered("HKLM", p, "Start", "DWord", a.DisabledValue);
+                                    st.Untouched = false;
                                     if (Convert.ToString(_reg.Read("HKLM", p, "Start")) == "2") svcOps.Add((st, a.Target!, false));
                                 }
+                                else AppLog.Info($"No original start type for {a.Target}; left as is");
                                 break;
                             }
                         }
@@ -157,36 +161,91 @@ public sealed partial class TweakEngine
 
     private void ApplyActionRegistry(SettingAction a)
     {
-        if (a.Type == ActionType.Registry) WriteRemembering(a.Hive!, a.Path!, a.Name ?? "", a.Kind, a.EnabledValue);
-        else foreach (var sub in ActiveInterfaces(a)) WriteRemembering(a.Hive!, $@"{a.Path}\{sub}", a.Name ?? "", a.Kind, a.EnabledValue);
+        if (a.Type == ActionType.Registry) ApplyRegistryValue(a.Hive!, a.Path!, a.Name ?? "", a.Kind, a.EnabledValue);
+        else foreach (var sub in ActiveInterfaces(a)) ApplyRegistryValue(a.Hive!, $@"{a.Path}\{sub}", a.Name ?? "", a.Kind, a.EnabledValue);
     }
 
-    private void RevertActionRegistry(SettingAction a)
+    /// <summary>Restores only keys WinBoost recorded. Returns false when there is nothing to put back.</summary>
+    private bool RevertActionRegistry(SettingAction a)
     {
-        if (a.Type == ActionType.Registry) RestoreRemembered(a.Hive!, a.Path!, a.Name ?? "", a.Kind, a.DisabledValue);
-        else foreach (var sub in _reg.SubKeys(a.Hive!, a.Path!)) RestoreRemembered(a.Hive!, $@"{a.Path}\{sub}", a.Name ?? "", a.Kind, a.DisabledValue);
+        if (a.Type == ActionType.Registry)
+            return RestoreRecorded(a.Hive!, a.Path!, a.Name ?? "");
+        var rows = RecordsUnder(a.Hive!, a.Path!, a.Name ?? "");
+        if (rows.Count == 0) return false;
+        foreach (var (key, entry) in rows)
+        {
+            _reg.Restore(entry);
+            OriginalStore.Forget(key);
+        }
+        return true;
     }
 
-    /// <summary>All Command actions of the batch in one powershell.exe: each apply/revert snippet then its check, isolated.</summary>
-    private static async Task DryPowerAsync(List<ItemState> states)
+    /// <summary>Reads that stand in for the powercfg writes (active scheme, AC index, DC index, one activation).</summary>
+    private static Task DryPowerAsync(List<ItemState> states) => ProcessRunner.WithPowerCfgAsync(async () =>
     {
         var acts = states.SelectMany(s => s.Item.Setting.Actions).ToList();
         if (acts.Any(a => a.Type == ActionType.PowerPlan)) { await PowerService.GetActiveSchemeAsync().ConfigureAwait(false); await PowerService.SchemeExistsAsync(AppConstants.UltimatePlanGuid).ConfigureAwait(false); }
         var pw = acts.Where(a => a.Type == ActionType.PowerSetting && a.Subgroup is not null && a.SettingGuid is not null).ToList();
         if (pw.Count > 0) await PowerService.ReadManyAsync(pw.Select(a => (a.Subgroup!, a.SettingGuid!))).ConfigureAwait(false);
-        foreach (var a in pw) await ProcessRunner.RunAsync("powercfg.exe", $"/qh SCHEME_CURRENT {a.Subgroup} {a.SettingGuid}", 20_000).ConfigureAwait(false); // stands in for each /setacvalueindex
-        await ProcessRunner.RunAsync("powercfg.exe", "/getactivescheme", 20_000).ConfigureAwait(false); // stands in for /setactive
-    }
+        foreach (var a in pw)
+        {
+            await ProcessRunner.RunAsync("powercfg.exe", $"/qh SCHEME_CURRENT {a.Subgroup} {a.SettingGuid}", 20_000).ConfigureAwait(false);
+            await ProcessRunner.RunAsync("powercfg.exe", $"/qh SCHEME_CURRENT {a.Subgroup} {a.SettingGuid}", 20_000).ConfigureAwait(false);
+        }
+        await ProcessRunner.RunAsync("powercfg.exe", "/getactivescheme", 20_000).ConfigureAwait(false);
+    });
 
     private static async Task RunPowerShellBatchAsync(List<ItemState> states, Dictionary<string, bool> checks, bool dryRun)
     {
-        var jobs = new List<(ItemState St, SettingAction A, string Script)>();
+        var jobs = new List<(ItemState St, SettingAction A, string Script, string? ForgetKey)>();
         foreach (var st in states)
             foreach (var a in st.Item.Setting.Actions.Where(a => a.Type == ActionType.Command))
             {
-                string? sc = dryRun ? a.CheckCommand : st.Item.Apply ? a.ApplyCommand : a.RevertCommand;
-                if (!dryRun && !st.Item.Apply && (string.IsNullOrWhiteSpace(a.RevertCommand) || a.RevertCommand == a.ApplyCommand)) st.Untouched = true;
-                if (!string.IsNullOrWhiteSpace(sc)) jobs.Add((st, a, sc!));
+                if (dryRun)
+                {
+                    if (!string.IsNullOrWhiteSpace(a.CheckCommand)) jobs.Add((st, a, a.CheckCommand!, null));
+                    continue;
+                }
+                var kind = CommandSnapshots.Classify(a.ApplyCommand);
+                if (st.Item.Apply)
+                {
+                    if (kind is not null)
+                    {
+                        string key = CommandSnapshots.StoreKey(kind.Value);
+                        if (OriginalStore.Get(key) is null)
+                        {
+                            var cap = await ProcessRunner.PowerShellAsync(CommandSnapshots.CaptureScript(kind.Value), 90_000).ConfigureAwait(false);
+                            var entry = CommandSnapshots.Parse(kind.Value, cap.Output);
+                            if (cap.ExitCode != 0 || entry is null)
+                            {
+                                st.Fail("could not read the current state before the command");
+                                AppLog.Warn($"{st.Item.Setting.Id}: capture failed ({cap.ExitCode}) {cap.Output}");
+                                continue;
+                            }
+                            OriginalStore.RememberIfAbsent(key, () => entry);
+                        }
+                    }
+                    if (!string.IsNullOrWhiteSpace(a.ApplyCommand)) jobs.Add((st, a, a.ApplyCommand!, null));
+                }
+                else
+                {
+                    if (kind is null)
+                    {
+                        AppLog.Info($"{st.Item.Setting.Id}: command revert skipped (no recorded original).");
+                        continue;
+                    }
+                    string key = CommandSnapshots.StoreKey(kind.Value);
+                    var rec = OriginalStore.Get(key);
+                    var script = rec is null ? null : CommandSnapshots.RevertScript(kind.Value, rec.Value);
+                    if (script is null)
+                    {
+                        if (rec is not null && CommandSnapshots.IsAlreadyTweakState(kind.Value, rec.Value)) OriginalStore.Forget(key);
+                        AppLog.Info($"{st.Item.Setting.Id}: command revert skipped (state already the machine's, or never recorded).");
+                        continue;
+                    }
+                    st.Untouched = false;
+                    jobs.Add((st, a, script, key));
+                }
             }
         if (jobs.Count == 0) return;
         // Each snippet loads a different CIM module (NetAdapter, ScheduledTasks, MMAgent, NetTCPIP…), which is what costs
@@ -217,6 +276,7 @@ public sealed partial class TweakEngine
             {
                 seen.Add(idx);
                 if (!val.StartsWith("OK")) { jobs[idx].St.Fail(val.Length > 4 ? val[4..] : val); AppLog.Warn($"{jobs[idx].St.Item.Setting.Id}: command failed: {val}"); }
+                else if (jobs[idx].ForgetKey is { } forget) OriginalStore.Forget(forget);
             }
             else if (t[2] == 'C' && jobs[idx].A.CheckCommand is { } chk) lock (checks) checks[chk] = val.Equals("True", StringComparison.OrdinalIgnoreCase);
         }
@@ -224,81 +284,108 @@ public sealed partial class TweakEngine
             if (!seen.Contains(i)) jobs[i].St.Fail(codes[i] == -1 ? "PowerShell timed out" : $"no result (exit {codes[i]})");
     }
 
-    /// <summary>Power settings target SCHEME_CURRENT, so order matters: reverts, then plan switch, then applies; one /setactive at the end.</summary>
-    private static async Task RunPowerChainAsync(List<ItemState> states)
+    /// <summary>
+    /// Reverts recorded indexes on their own scheme (AC and DC), then the plan, then applies on the active scheme.
+    /// The chain holds the powercfg lock so a hibernate script cannot land between two indexes.
+    /// </summary>
+    private static Task RunPowerChainAsync(List<ItemState> states) => ProcessRunner.WithPowerCfgAsync(async () =>
     {
         var plan = states.SelectMany(s => s.Item.Setting.Actions.Where(a => a.Type == ActionType.PowerPlan).Select(a => (St: s, A: a))).ToList();
         var power = states.SelectMany(s => s.Item.Setting.Actions.Where(a => a.Type == ActionType.PowerSetting && a.Subgroup is not null && a.SettingGuid is not null).Select(a => (St: s, A: a))).ToList();
         if (plan.Count == 0 && power.Count == 0) return;
-        bool changed = false;
-        bool planReverted = plan.Any(p => !p.St.Item.Apply);
 
-        async Task SetIndex(ItemState st, SettingAction a, uint v)
-        {
-            var r = await ProcessRunner.RunAsync("powercfg.exe", $"/setacvalueindex SCHEME_CURRENT {a.Subgroup} {a.SettingGuid} {v}", 20_000).ConfigureAwait(false);
-            if (r.ExitCode != 0) st.Fail("powercfg: " + r.Output); else changed = true;
-        }
-
-        // reverts of power settings (on the scheme they were set on)
+        string? active = await PowerService.GetActiveSchemeAsync().ConfigureAwait(false);
+        bool touchActive = false;
         foreach (var (st, a) in power.Where(p => !p.St.Item.Apply))
         {
             try
             {
-                string key = $"power|{a.Subgroup}|{a.SettingGuid}".ToLowerInvariant();
-                var orig = OriginalStore.Get(key);
-                if (orig?.Value is null) { AppLog.Info($"No original for {a.SettingGuid}; left as is (value never changed by WinBoost on this plan)"); st.Untouched = true; continue; }
-                await SetIndex(st, a, uint.Parse(orig.Value, CultureInfo.InvariantCulture)).ConfigureAwait(false);
-                OriginalStore.Forget(key);
-                // Restoring the very value we'd set, or leaving the WinBoost plan for the user's own plan (whose values
-                // WinBoost never touched), means the value detected afterwards is the user's own — not a failed revert.
-                if (orig.Value == a.EnabledValue || planReverted) st.Untouched = true;
+                var records = RecordsFor(a);
+                if (records.Count == 0) { AppLog.Info($"No original for {a.SettingGuid}; left as is"); continue; }
+                bool wrote = false;
+                foreach (var (key, entry) in records)
+                {
+                    if (!PowerIndex.TrySplit(key, out var scheme, out var sub, out var setting) || !PowerIndex.TryParse(entry.Value, out var ac, out var dc))
+                    {
+                        st.Fail("power original has no scheme or no AC/DC value");
+                        AppLog.Warn($"Power original '{key}' left as is");
+                        continue;
+                    }
+                    await PowerService.SetIndexesAsync(scheme, sub, setting, ac, dc).ConfigureAwait(false);
+                    if (active is not null && scheme.Equals(active, StringComparison.OrdinalIgnoreCase)) touchActive = true;
+                    OriginalStore.Forget(key);
+                    wrote = true;
+                }
+                if (wrote) st.Untouched = false;
             }
             catch (Exception ex) { st.Fail(ex.Message); }
         }
-        if (changed && plan.Count > 0) { await ProcessRunner.RunAsync("powercfg.exe", "/setactive SCHEME_CURRENT", 20_000).ConfigureAwait(false); changed = false; }
+        if (touchActive && active is not null)
+            await PowerService.SetActiveAsync(active).ConfigureAwait(false);
 
-        // plan
-        foreach (var (st, a) in plan)
+        foreach (var (st, _) in plan)
         {
             try
             {
                 if (st.Item.Apply)
                 {
                     string? current = await PowerService.GetActiveSchemeAsync().ConfigureAwait(false);
-                    if (current is not null && !current.Equals(AppConstants.UltimatePlanGuid, StringComparison.OrdinalIgnoreCase))
+                    if (current is null) { st.Fail("active power scheme unknown; plan was not changed"); continue; }
+                    if (!current.Equals(AppConstants.UltimatePlanGuid, StringComparison.OrdinalIgnoreCase))
                         OriginalStore.RememberIfAbsent("plan", () => new BackupEntry { Name = "plan", Existed = true, Value = current });
                     await PowerService.EnsureUltimateAsync().ConfigureAwait(false);
                     await PowerService.SetActiveAsync(AppConstants.UltimatePlanGuid).ConfigureAwait(false);
+                    st.Untouched = false;
                 }
                 else
                 {
-                    string target = OriginalStore.Get("plan")?.Value ?? PowerService.Balanced;
-                    if (!await PowerService.SchemeExistsAsync(target).ConfigureAwait(false)) target = PowerService.Balanced;
-                    await PowerService.SetActiveAsync(target).ConfigureAwait(false);
+                    var orig = OriginalStore.Get("plan");
+                    if (string.IsNullOrWhiteSpace(orig?.Value)) { AppLog.Info("No original power plan; left as is"); continue; }
+                    if (!await PowerService.SchemeExistsAsync(orig.Value).ConfigureAwait(false))
+                    {
+                        st.Fail("original power plan no longer exists: " + orig.Value);
+                        continue;
+                    }
+                    await PowerService.SetActiveAsync(orig.Value).ConfigureAwait(false);
                     OriginalStore.Forget("plan");
+                    st.Untouched = false;
                 }
             }
             catch (Exception ex) { st.Fail(ex.Message); }
         }
 
-        // applies: one /qh dump for the originals, then the writes
         var applies = power.Where(p => p.St.Item.Apply).ToList();
-        if (applies.Count > 0)
+        if (applies.Count == 0) return;
+        string? schemeNow = await PowerService.GetActiveSchemeAsync().ConfigureAwait(false);
+        if (schemeNow is null)
         {
-            var cur = await PowerService.ReadManyAsync(applies.Select(p => (p.A.Subgroup!, p.A.SettingGuid!))).ConfigureAwait(false);
-            foreach (var (st, a) in applies)
-            {
-                try
-                {
-                    if (!cur.TryGetValue(a.SettingGuid!, out var read) || !read.Ok) { st.Fail("powercfg did not answer"); continue; }
-                    if (read.Value is null) { AppLog.Info($"Power setting {a.SettingGuid} not available on this PC, skipped"); continue; }
-                    OriginalStore.RememberIfAbsent($"power|{a.Subgroup}|{a.SettingGuid}".ToLowerInvariant(),
-                        () => new BackupEntry { Name = a.SettingGuid!, Existed = true, Value = read.Value.Value.ToString(CultureInfo.InvariantCulture) });
-                    await SetIndex(st, a, uint.Parse(a.EnabledValue!, CultureInfo.InvariantCulture)).ConfigureAwait(false);
-                }
-                catch (Exception ex) { st.Fail(ex.Message); }
-            }
+            foreach (var (st, _) in applies) st.Fail("active power scheme unknown; power setting was not changed");
+            return;
         }
-        if (changed) await ProcessRunner.RunAsync("powercfg.exe", "/setactive SCHEME_CURRENT", 20_000).ConfigureAwait(false);
+        var cur = await PowerService.ReadManyAsync(applies.Select(p => (p.A.Subgroup!, p.A.SettingGuid!))).ConfigureAwait(false);
+        bool wroteApply = false;
+        foreach (var (st, a) in applies)
+        {
+            try
+            {
+                if (!cur.TryGetValue(a.SettingGuid!, out var read) || !read.Ok) { st.Fail("powercfg did not answer"); continue; }
+                if (read.Ac is null) { AppLog.Info($"Power setting {a.SettingGuid} not available on this PC, skipped"); continue; }
+                OriginalStore.RememberIfAbsent(PowerIndex.Key(schemeNow, a.Subgroup!, a.SettingGuid!),
+                    () => new BackupEntry { Name = a.SettingGuid!, Existed = true, Value = PowerIndex.Format(read.Ac.Value, read.Dc) });
+                uint v = uint.Parse(a.EnabledValue!, CultureInfo.InvariantCulture);
+                await PowerService.SetIndexesAsync(schemeNow, a.Subgroup!, a.SettingGuid!, v, v).ConfigureAwait(false);
+                wroteApply = true;
+            }
+            catch (Exception ex) { st.Fail(ex.Message); }
+        }
+        if (wroteApply) await PowerService.SetActiveAsync(schemeNow).ConfigureAwait(false);
+    });
+
+    private static List<(string Key, BackupEntry Entry)> RecordsFor(SettingAction a)
+    {
+        var list = new List<(string Key, BackupEntry Entry)>();
+        foreach (var (key, entry) in OriginalStore.Snapshot())
+            if (PowerIndex.SameSetting(key, a.Subgroup!, a.SettingGuid!)) list.Add((key, entry));
+        return list;
     }
 }

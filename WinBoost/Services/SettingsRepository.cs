@@ -1,11 +1,16 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinBoost.Logic;
 using WinBoost.Models;
 
 namespace WinBoost.Services;
 
-/// <summary>Loads the data-driven tweak list. An override file %LocalAppData%\WinBoost\settings.json (if valid) wins over the embedded one.</summary>
+/// <summary>
+/// Loads the tweak list shipped with the app. An optional %LocalAppData%\WinBoost\settings.json may append
+/// extra non-command tweaks. It cannot replace a built-in setting and cannot add a Command action
+/// (that file is writable by a non-elevated user; WinBoost runs as administrator).
+/// </summary>
 public static class SettingsRepository
 {
     public static readonly JsonSerializerOptions Json = new()
@@ -20,16 +25,27 @@ public static class SettingsRepository
 
     public static List<Setting> Load()
     {
+        var embedded = LoadEmbedded();
         string over = Path.Combine(AppConstants.DataFolder, "settings.json");
-        if (File.Exists(over))
+        if (!File.Exists(over)) return embedded;
+        try
         {
-            try
-            {
-                var list = Validate(JsonSerializer.Deserialize<List<Setting>>(File.ReadAllText(over), Json));
-                if (list.Count > 0) { AppLog.Info($"Loaded {list.Count} settings from override {over}"); return list; }
-            }
-            catch (Exception ex) { AppLog.Error("Override settings.json invalid — using embedded list", ex); }
+            var overlay = Validate(JsonSerializer.Deserialize<List<Setting>>(File.ReadAllText(over), Json));
+            var merged = SettingsMerge.Apply(embedded, overlay, AppLog.Warn);
+            int added = merged.Count - embedded.Count;
+            if (added > 0) AppLog.Info($"Override {over}: {added} extra non-command setting(s) appended; built-in settings unchanged.");
+            else AppLog.Info($"Override {over} added no settings (built-in list kept; commands from this file are never run).");
+            return merged;
         }
+        catch (Exception ex)
+        {
+            AppLog.Error("Override settings.json invalid — using embedded list only", ex);
+            return embedded;
+        }
+    }
+
+    private static List<Setting> LoadEmbedded()
+    {
         try
         {
             using Stream? s = Assembly.GetExecutingAssembly().GetManifestResourceStream("WinBoost.Data.settings.json");

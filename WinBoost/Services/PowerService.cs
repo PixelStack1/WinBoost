@@ -1,5 +1,5 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
+using WinBoost.Logic;
 
 namespace WinBoost.Services;
 
@@ -8,12 +8,11 @@ public static partial class PowerService
 {
     private const string UltimateTemplate = "e9a42b02-d5df-448d-aa00-03f14749eb61";
     private const string HighPerfTemplate = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+    /// <summary>Windows Balanced scheme. Never used as a revert target: without a recorded plan the active scheme is left as it is.</summary>
     public const string Balanced = "381b4222-f694-41f0-9685-ff5bb260df2e";
 
     [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")]
     private static partial Regex GuidRx();
-    [GeneratedRegex(@"0x([0-9a-fA-F]{8})")]
-    private static partial Regex HexRx();
 
     public static async Task<string?> GetActiveSchemeAsync()
     {
@@ -49,21 +48,13 @@ public static partial class PowerService
         if (r.ExitCode != 0) throw new InvalidOperationException("powercfg /setactive failed: " + r.Output);
     }
 
-    /// <summary>Returns the current AC value index of a power setting on the active scheme, or null if the setting doesn't exist.</summary>
-    public static async Task<uint?> GetAcValueAsync(string sub, string setting)
-    {
-        var r = await ProcessRunner.RunAsync("powercfg.exe", $"/qh SCHEME_CURRENT {sub} {setting}", 20_000).ConfigureAwait(false);
-        if (r.ExitCode != 0) return null;
-        var hex = HexRx().Matches(r.Output);
-        // The last two 0x values are "Current AC" then "Current DC" (the DC line is absent on some desktops).
-        if (hex.Count < 2) return null;
-        string ac = hex[hex.Count - 2].Groups[1].Value;
-        return uint.Parse(ac, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-    }
-
     /// <summary>Outcome of a power-setting read: Ok=false means powercfg itself failed (timeout/start error → unknown).
-    /// Ok=true with Value=null means the setting doesn't exist on this PC.</summary>
-    public readonly record struct PowerRead(bool Ok, uint? Value);
+    /// Ok=true with Ac=null means the setting doesn't exist on this PC. Dc is null when the block has no DC index.</summary>
+    public readonly record struct PowerRead(bool Ok, uint? Ac, uint? Dc)
+    {
+        /// <summary>AC index, kept under the old name for call sites that only compare the plugged-in value.</summary>
+        public uint? Value => Ac;
+    }
 
     /// <summary>
     /// Reads many AC indices with ONE "powercfg /q SCHEME_CURRENT" call (language-independent: GUIDs + 0x values),
@@ -85,9 +76,9 @@ public static partial class PowerService
                 if (m is null) { missing.Add(w); continue; }
                 var next = guids.FirstOrDefault(g => g.Index > m.Index);
                 int end = next?.Index ?? dump.Output.Length;
-                var hex = HexRx().Matches(dump.Output.Substring(m.Index, end - m.Index));
-                if (hex.Count < 2) { missing.Add(w); continue; }
-                result[w.Setting] = new PowerRead(true, uint.Parse(hex[hex.Count - 2].Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+                var (ac, dc) = PowerHex.ParseAcDc(dump.Output.Substring(m.Index, end - m.Index));
+                if (ac is null) { missing.Add(w); continue; }
+                result[w.Setting] = new PowerRead(true, ac, dc);
             }
         }
         else missing.AddRange(list);
@@ -98,17 +89,29 @@ public static partial class PowerService
     public static async Task<PowerRead> ReadOneAsync(string sub, string setting)
     {
         var r = await ProcessRunner.RunAsync("powercfg.exe", $"/qh SCHEME_CURRENT {sub} {setting}", 20_000).ConfigureAwait(false);
-        if (r.ExitCode is -1 or -2) return new PowerRead(false, null);  // timeout / could not start: unknown
-        if (r.ExitCode != 0) return new PowerRead(true, null);          // setting not present on this PC
-        var hex = HexRx().Matches(r.Output);
-        if (hex.Count < 2) return new PowerRead(true, null);
-        return new PowerRead(true, uint.Parse(hex[hex.Count - 2].Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+        if (r.ExitCode is -1 or -2) return new PowerRead(false, null, null);  // timeout / could not start: unknown
+        if (r.ExitCode != 0) return new PowerRead(true, null, null);          // setting not present on this PC
+        var (ac, dc) = PowerHex.ParseAcDc(r.Output);
+        if (ac is null) return new PowerRead(true, null, null);
+        return new PowerRead(true, ac, dc);
     }
 
-    public static async Task SetAcValueAsync(string sub, string setting, uint value)
+    /// <summary>Writes AC and, when <paramref name="dc"/> is set, DC, on an explicit scheme. Does not activate the scheme.</summary>
+    public static async Task SetIndexesAsync(string scheme, string sub, string setting, uint ac, uint? dc)
     {
-        var r = await ProcessRunner.RunAsync("powercfg.exe", $"/setacvalueindex SCHEME_CURRENT {sub} {setting} {value}", 20_000).ConfigureAwait(false);
+        var r = await ProcessRunner.RunAsync("powercfg.exe", $"/setacvalueindex {scheme} {sub} {setting} {ac}", 20_000).ConfigureAwait(false);
         if (r.ExitCode != 0) throw new InvalidOperationException($"powercfg /setacvalueindex failed: {r.Output}");
-        await ProcessRunner.RunAsync("powercfg.exe", "/setactive SCHEME_CURRENT", 20_000).ConfigureAwait(false);
+        if (dc is uint d)
+        {
+            var rd = await ProcessRunner.RunAsync("powercfg.exe", $"/setdcvalueindex {scheme} {sub} {setting} {d}", 20_000).ConfigureAwait(false);
+            if (rd.ExitCode != 0) throw new InvalidOperationException($"powercfg /setdcvalueindex failed: {rd.Output}");
+        }
+    }
+
+    /// <summary>Applies the tweak value on both AC and DC of <paramref name="scheme"/>, then activates that scheme so the indexes take effect.</summary>
+    public static async Task SetBothAsync(string scheme, string sub, string setting, uint value)
+    {
+        await SetIndexesAsync(scheme, sub, setting, value, value).ConfigureAwait(false);
+        await SetActiveAsync(scheme).ConfigureAwait(false);
     }
 }

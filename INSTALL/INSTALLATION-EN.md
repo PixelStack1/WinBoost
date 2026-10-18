@@ -9,7 +9,7 @@
 ## First run
 1. Click **Refresh** — WinBoost reads your PC's current state.
 2. Open **Profiles** and pick **Recommended** (zero risk) or **Competitive**, or use **Boost my PC** on the Dashboard.
-3. Keep **Restore point before apply** on.
+3. A restore point is created before every change. The switch stays on.
 4. Click **Apply**. Some tweaks (HAGS, timer…) need a **reboot**.
 
 ## Rolling back
